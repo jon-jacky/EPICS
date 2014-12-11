@@ -8,9 +8,10 @@ These tools are for [CNTS](http://staff.washington.edu/jon/cnts/), the
 *Clinical Neutron Therapy System*, a cyclotron-based radiation therapy
 machine at the *University of Washington Medical Center* in Seattle.
 
-This [paper](doc/2013_Jacky_ICALEPCS.pdf) from the [ICALEPCS
-2013](http://www.icalepcs2013.org/) conference describes the system,
-including our use of EPICS.
+This
+[paper](http://accelconf.web.cern.ch/AccelConf/ICALEPCS2013/papers/tucoca05.pdf)
+from the [ICALEPCS 2013](http://www.icalepcs2013.org/) conference
+describes the system, including our use of EPICS.
 
 This repository provides these tools:
  
