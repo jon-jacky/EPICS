@@ -1,0 +1,125 @@
+# remove $(ROOM): $(ROOM="Iso"): and Collimator: prefixes throughout
+# replace "$(ODLY="80")" with "80"
+
+
+# Calculate enabling conditions for Collimator subsystem AutoSetup
+# Too many conditions to fit into 40 char CALC limit so split into two records
+record(calcout, "Subsystem:AutoSetup") {
+  # all of these interlocks must be clear
+  field(INPA, "LCCError:Status")
+  field(INPB, "LCCSetup:Status")
+  field(INPC, "LCCCal:Status")
+  # leaf motion must be in automatic mode -  FIXME make like this in FilterWedge
+  field(INPD, "LeafMotion:ControlAuto")
+  field(CALC, "A&&B&&C&&D") # all interlocks clear, control auto
+  field(OOPT, "When Non-zero") # when CALC is True, that is when intlks clear
+  field(DOPT, "Use CALC")
+  field(OUT, "LeafMotion:CheckUI.PROC PP") 
+}
+
+# Calculate more enabling conditions for Collimator subsystem AutoSetup
+record(scalcout, "LeafMotion:CheckUI") {
+  # one of these screens must be displayed
+  field(INAA, "UI:Panel")
+  field(BB, "summary.edl")
+  field(CC, "collimator.edl")
+  field(DD, "plc_motion.edl") # helpful for debugging
+  field(EE, "plc_status.edl") # ditto
+  field(CALC, "AA==BB||AA==CC||AA==DD||AA==EE") # one of these screens is displayed
+  field(OOPT, "When Non-zero")
+  field(DOPT, "Use CALC")
+  # That's all the enabling conditions, now start
+  field(OUT, "LeafMotion:Start.PROC PP") 
+}
+
+# FIXME still more enabling conditions should be added:
+# prescribed settings must be in range, and prescribed leaves must not collide
+
+record(seq, "LeafMotion:Start") {
+  field(SELM, "All")
+  field(DOL1, "1") # Turn on RequestEnabled
+  field(LNK1, "LeafMotion:RequestEnabled PP")
+  # Must send timeout interval in integer seconds to :Timeout.B, see Timeout record below
+  field(DOL4, "80")
+  field(LNK4, "LeafMotion:Timeout.B")
+  # up to 6 LNK
+}
+
+# just fixed csv files so this gets FLNK from LeafMotion:DriveEnabled
+record(fanout, "LeafMotion:DriveEnabledFanout") {
+  field(SELM, "All")
+  field(LNK1, "MotionSafety:Status")
+  field(LNK2, "LeafMotion:RunStart")
+  # up to 6 LNK
+}
+
+# When DriveEnabled comes on when RequestEnbled and Auto Setup intlk set, send CON RUN
+# would like to trigger this from DriveEnabled, otherwise must poll
+# Now DriveEnable FLNK in .csv goes to MotionSafety:Status, to use it here we need fanout.
+#  oh, but that FLNK is coded into csv2bi.py, we'd have to make special case, grr.
+#  do it, better than trying to pick it off the end of the C&C intlk calc chain.
+#  tried to edit csv2bi.py but didn't get the effect I expected, svn revert csv2bi -- !?
+record(calcout, "LeafMotion:RunStart") {
+  # Now we have FLNK from LeafMotion:DriveEnabled so we don't need periodic scan
+  # field(SCAN, "1 second") # FIXME: FLNK from DriveEnabled would be better, but see above
+  field(INPA, "LeafMotion:DriveEnabled")
+  field(CALC, "A")
+  field(DOPT, "Use CALC")
+  field(OOPT, "Transition To Zero")
+  field(OUT, "LCC:AutoSetup.PROC PP") # send CON RUN to LCC
+}
+
+# lcc.proto autosetup protocol assigns AA field here
+#  assigns AA to ' ' when protocol sends CON RUN, assigns '$' when protocol completes
+# It is like an INPA link from LCC:AutoSetup but there is no explicit INPA field here
+# This record sends 0 to OUT, :Timeout when CON RUN completes
+#  which forces :Timeout to expire immediately by assigning 0 to its VAL
+# To make sure this record processes when it is needed, SCAN must poll
+record(scalcout, "LeafMotion:RunStop") {
+  field(SCAN, "1 second") # Is this necessary?  Can't lcc.proto write to some .PROC ?
+  field(AA, " ") # space, ack character - indicates CON RUN has *not* completed
+  field(CALC, "AA!='$'")  # Neg logic, goes to zero to indicate CON RUN has completed
+  field(DOPT, "Use CALC")
+  field(OOPT, "Transition To Zero") # only when "$" arrives
+  # send 0 to Timeout.VAL
+  field(OUT, "LeafMotion:Timeout.VAL PP")
+  field(PINI, "1")
+}
+
+# stop auto setup when timeout expires
+# based on Tim Mooney, http://www.aps.anl.gov/epics/tech-talk/2012/msg01327.php
+# a - Timer register, counts down from timeout interval to 0
+#       assign timeout interval > 0 to Timeout.A to start or reset timer
+#       assign 0 to Timeout.VAL (or just Timeout) to force immediate timeout and send OUT 
+#     BUT can't write directly to Timeout.A because it will be overwritten by VAL via INPA
+#       instead write to Timeout.B, see below
+# c - Countdown enable, must be nonzero to enable a to count down
+#      Write 0 to Timeout.C to freeze countdown or cancel timeout, nonzero to resume
+# b - Write timeout interval > 0 to Timeout.B to assign it to both a and c
+#      Initializes both a and c, needed after c has been set to 0 to cancel timeout
+#      Needed to set a because otherwise a will be overwritten by VAL via INPA
+record(calcout, "LeafMotion:Timeout") {
+  field(SCAN, "1 second") # so a is timer interval in seconds
+  field(INPA, "LeafMotion:Timeout.VAL")
+  field(CALC, "b?b:(a&&c?a-1:a);c:=(b?b:c);b:=0") # 33 chars, max 36
+  field(OOPT, "Transition To Zero")
+  field(DOPT, "Use CALC")
+  field(OUT, "LeafMotion:Disable.PROC PP")
+}
+
+# when auto setup stops, disable motion, enable poll
+record(seq, "LeafMotion:Disable") {
+  field(SELM, "All")
+  field(DOL1, "0") # turn off RequestEnabled
+  field(LNK1, "LeafMotion:RequestEnabled PP") 
+  # up to 10 DOL/LNK 
+}
+
+# Auto Setup interlock - just the negation of RequestEnabled
+record(calcout, "LCCSetup:Calc") {
+  field(INPA, "LeafMotion:RequestEnabled")
+  field(CALC, "!A")
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "LCCSetup:Status PP")
+}

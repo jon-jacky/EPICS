@@ -1,0 +1,182 @@
+# started from motion_achieved_subs.db
+# remove all "Iso:FilterWedge:"
+# change all field(VAL, 0) to field(VAL, "0")
+# change all alias(...) to #  alias(...) - comment them all out
+
+
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeTypeNone:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 89 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Wedge Type at None to VME")
+    field(FLNK,"WedgeType:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0990:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeType30:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 90 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Wedge Type at 30 to VME")
+    field(FLNK,"WedgeType:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0991:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeType45:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 91 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Wedge Type at 45 to VME")
+    field(FLNK,"WedgeType:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0992:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeType60:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 92 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Wedge Type at 60 to VME")
+    field(FLNK,"WedgeType:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0993:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeRot0:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 93 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Wedge Rot at 0 to VME")
+    field(FLNK,"WedgeRot:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0994:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeRot90:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 94 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Wedge Rot at 90 to VME")
+    field(FLNK,"WedgeRot:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0995:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeRot180:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 95 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Wedge Rot at 180 to VME")
+    field(FLNK,"WedgeRot:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0996:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeRot270:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 96 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Wedge Rot at 270 to VME")
+    field(FLNK,"WedgeRot:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0997:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"FlatFilterLarge:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 97 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Flat Filter at Large to VME")
+    field(FLNK,"FlatFilter:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0998:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"FlatFilterSmall:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 98 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Flat Filter at Small to VME")
+    field(FLNK,"FlatFilter:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0999:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"FlatFilterNone:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 99 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Flat Filter at None to VME")
+    field(FLNK,"FlatFilter:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil1000:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}

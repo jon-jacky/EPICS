@@ -1,0 +1,15 @@
+record(asyn,"MOD1:TCPAsyn00")
+{
+    field(DTYP,"asynRecordDevice")
+    field(PORT,"MasterControlwrite")
+    field(ADDR,"0")
+    field(OMAX,"80")
+    field(IMAX,"80")
+}
+
+record(waveform,"MOD1:CnOutWArray") {
+    field(DTYP,"asynInt32ArrayOut")
+    field(INP,"@asyn(MasterControlOut_Word 0)MODBUS_DATA")
+    field(FTVL,"LONG")
+    field(NELM,"281")
+}

@@ -1,0 +1,207 @@
+# remove Iso:Dosimetry: throughout
+
+record(longout, "Fractions:Prescribed") {
+  field(DESC, "FRAC")
+  field(LOPR, "0")
+  field(HOPR, "99")
+  field(EGU, "MU") # rotation, override default with "cm" for linear
+  field(FLNK, "Fractions:Calc")
+}
+
+
+record(longin, "Fractions:Accumulated") {
+  field(DESC, "FRAC")
+  field(LOPR, "0")
+  field(HOPR, "99")
+  field(EGU, "MU") # rotation, override default with "cm" for linear
+  field(FLNK, "Fractions:Calc")
+}
+
+
+record(calc, "Fractions:Calc"){
+  field(INPA, "Fractions:Prescribed")
+  field(INPB, "Fractions:Accumulated")
+  field(CALC, "(A>B)?2:0")
+  field(FLNK, "Fractions:Readiness")
+}
+
+
+record(mbbo, "Fractions:Readiness") {
+  field(DESC, "FRAC")
+  field(VAL, "0")  # initially NOT READY
+  field(ZRST, "NOT READY")
+  field(ONST, "OVERRIDE")
+  field(TWST, "READY")
+  field(DOL, "Fractions:Calc") 
+  field(OMSL, "closed_loop") # needed for DOL
+field(FLNK,  "Settings:Readiness")
+}
+
+
+record(ao, "TotalDose:Prescribed") {
+  field(DESC, "TOTAL MU")
+  field(LOPR, "0.0")
+  field(HOPR, "9999.9")
+  field(EGU, "MU") # rotation, override default with "cm" for linear
+  field(PREC, "1")
+  field(FLNK, "TotalDose:Calc")
+}
+
+
+record(ai, "TotalDose:Accumulated") {
+  field(DESC, "TOTAL MU")
+  field(LOPR, "0.0")
+  field(HOPR, "9999.9")
+  field(EGU, "MU") # rotation, override default with "cm" for linear
+  field(PREC, "1")
+  field(FLNK, "TotalDose:Calc")
+}
+
+
+record(calc, "TotalDose:Calc"){
+  field(INPA, "TotalDose:Prescribed")
+  field(INPB, "TotalDose:Accumulated")
+  field(CALC, "(A>B)?2:0")
+  field(FLNK, "TotalDose:Readiness")
+}
+
+
+record(mbbo, "TotalDose:Readiness") {
+  field(DESC, "TOTAL MU")
+  field(VAL, "0")  # initially NOT READY
+  field(ZRST, "NOT READY")
+  field(ONST, "OVERRIDE")
+  field(TWST, "READY")
+  field(DOL, "TotalDose:Calc") 
+  field(OMSL, "closed_loop") # needed for DOL
+field(FLNK,  "Settings:Readiness")
+}
+
+
+record(ao, "DailyDose:Prescribed") {
+  field(DESC, "DAILY MU")
+  field(LOPR, "0.0")
+  field(HOPR, "999.8")
+  field(EGU, "MU") # rotation, override default with "cm" for linear
+  field(PREC, "1")
+  field(FLNK, "DailyDose:Calc")
+}
+
+
+record(ai, "DailyDose:Accumulated") {
+  field(DESC, "DAILY MU")
+  field(LOPR, "0.0")
+  field(HOPR, "999.8")
+  field(EGU, "MU") # rotation, override default with "cm" for linear
+  field(PREC, "1")
+  field(FLNK, "DailyDose:Calc")
+}
+
+
+record(calc, "DailyDose:Calc"){
+  field(INPA, "DailyDose:Prescribed")
+  field(INPB, "DailyDose:Accumulated")
+  field(CALC, "(A>B)?2:0")
+  field(FLNK, "DailyDose:Readiness")
+}
+
+
+record(mbbo, "DailyDose:Readiness") {
+  field(DESC, "DAILY MU")
+  field(VAL, "0")  # initially NOT READY
+  field(ZRST, "NOT READY")
+  field(ONST, "OVERRIDE")
+  field(TWST, "READY")
+  field(DOL, "DailyDose:Calc") 
+  field(OMSL, "closed_loop") # needed for DOL
+field(FLNK,  "Settings:Readiness")
+}
+
+# for RunDose and Time, similar to accum.template for TotalDose and DailyDose
+
+record(ao, "RunDose:Computed") {
+  field(DESC, "DOSIMETRY")
+  field(LOPR, "0.0")
+  field(HOPR, "999.8")
+  field(EGU, "MU")
+  field(PREC, "1")
+}
+
+record(ai, "RunDose:Preset") {
+  field(DESC, "DOSIMETRY")
+  field(LOPR, "0.0")
+  field(HOPR, "999.8")
+  field(EGU, "MU")
+  field(PREC, "1")
+}
+
+# for RunDose and Time, similar to accum.template for TotalDose and DailyDose
+
+record(ao, "Time:Computed") {
+  field(DESC, "TIME")
+  field(LOPR, "0.00")
+  field(HOPR, "99.99")
+  field(EGU, "min")
+  field(PREC, "2")
+}
+
+record(ai, "Time:Preset") {
+  field(DESC, "TIME")
+  field(LOPR, "0.00")
+  field(HOPR, "99.99")
+  field(EGU, "min")
+  field(PREC, "2")
+}
+
+# For DoseA:Actual, DoseB:Actual, Time:Actual, RunDose:Official
+# Similar to accum.template for TotalDose and DailyDose, RunDose and Time
+#  but only one record.  
+# ao is usually ai for inputs, ao for outputs
+# RunDose:Official must include full suffix as in "DoseA:Actual"
+
+record(ao, "RunDose:Official") {
+  field(DESC, "DOSE")
+  field(LOPR, "0.0")
+  field(HOPR, "999.8")
+  field(EGU, "MU")
+  field(PREC, "1")
+}
+# For DoseA:Actual, DoseB:Actual, Time:Actual, RunDose:Official
+# Similar to accum.template for TotalDose and DailyDose, RunDose and Time
+#  but only one record.  
+# ai is usually ai for inputs, ao for outputs
+# DoseA:Actual must include full suffix as in "DoseA:Actual"
+
+record(ai, "DoseA:Actual") {
+  field(DESC, "DOSE A")
+  field(LOPR, "0.0")
+  field(HOPR, "999.8")
+  field(EGU, "MU")
+  field(PREC, "1")
+}
+# For DoseA:Actual, DoseB:Actual, Time:Actual, RunDose:Official
+# Similar to accum.template for TotalDose and DailyDose, RunDose and Time
+#  but only one record.  
+# ai is usually ai for inputs, ao for outputs
+# DoseB:Actual must include full suffix as in "DoseA:Actual"
+
+record(ai, "DoseB:Actual") {
+  field(DESC, "DOSE B")
+  field(LOPR, "0.0")
+  field(HOPR, "999.8")
+  field(EGU, "MU")
+  field(PREC, "1")
+}
+# For DoseA:Actual, DoseB:Actual, Time:Actual, RunDose:Official
+# Similar to accum.template for TotalDose and DailyDose, RunDose and Time
+#  but only one record.  
+# ai is usually ai for inputs, ao for outputs
+# Time:Actual must include full suffix as in "DoseA:Actual"
+
+record(ai, "Time:Actual") {
+  field(DESC, "TIME")
+  field(LOPR, "0.00")
+  field(HOPR, "99.99")
+  field(EGU, "min")
+  field(PREC, "2")
+}

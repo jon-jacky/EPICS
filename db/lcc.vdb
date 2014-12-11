@@ -1,0 +1,256 @@
+# remove  $(ROOM): $(ROOM="Iso"): Iso:Collimator: Collimator:  Iso:
+# replace DOL1, 0 with DOL1, "0"
+
+# So we can control diagnostic messages via asyn traceMask, alternative to 
+#  dbLoadRecords("db/asynRecord.db","P=Iso,R=LCC:Asyn,PORT=lcc,ADDR=0,OMAX=0,IMAX=0")
+record(asyn, "LCC:Asyn"){
+  field(PORT, "lcc") # must match port in drvAsynIPPortConfigure
+  # let ADDR, OMAX, IMAX fields default to 0
+}
+
+# These stream records for protocols do not require the asyn record above
+record(stringin, "LCC:Test") {
+  field(SCAN, "Passive") # caput LCC:Test.PROC 1 to force processing
+  field(DTYP, "stream")
+  # INP, "@file protocol port" where port must match drvAsynIPPortConfigure
+  field(INP, "@lcc.proto test lcc") # Just writes "LCC " to serial port
+}
+
+# Do not disable reset if LCCError interlock is set, use reset to clear it
+record(stringin, "LCC:Reset") {
+  field(SCAN, "Passive")
+  field(DTYP, "stream")
+  field(INP, "@lcc.proto reset lcc") # out ESC CR, in to stringin VAL
+  field(PINI, "1") # force reset at startup
+  field(FLNK, "LCC:ResetCalc") # set LCC intlk if reset fails
+}
+
+# Disable polling if LCCError interlock OR LCCSetup interlock is set
+record(calc, "LCC:PollDisable") {
+  field(INPA, "LCCError:Status")
+  field(INPB, "LCCSetup:Status")
+  field(INPC, "LCCInit:Status")
+  # negative logic - output is 0 (intlk set) when any input is 0
+  field(CALC, "A&&B&&C")
+  field(PINI, "1") # apparently not effective - still have to dbpf ....PollDisable.PROC 1
+}
+
+# Poll
+record(stringin, "LCC:Poll") {
+  field(SCAN, "Passive") # For production, use 2 seconds
+  field(DTYP, "stream")
+  field(INP, "@lcc.proto poll lcc") # out OUT ALL, in to :Actual PVs
+  field(SDIS, "LCC:PollDisable")
+  field(DISA, "0")
+  field(DISV, "0")
+  field(FLNK, "LCC:PollCalc") # set LCC intlk if poll fails
+}
+
+
+# PollIndicator - indicate polling by toggling Dosimetry:RelayError:Status
+#  which is not connected to anything in the test version
+# Just for tesing PollDisable logic - omit from production version
+record(calcout, "LCC:PollIndicator") {
+  field(SCAN, "2 second")
+  field(INPA, "Dosimetry:RelayError:Status")
+  field(CALC, "!A") # flip bit each time
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "Dosimetry:RelayError:Status PP")
+  field(SCAN, "2 second") # For production, use 2 second
+  field(SDIS, "LCC:PollDisable")
+  field(DISA, "0")
+  field(DISV, "0")
+}
+
+# In commands to lcc.proto, do *not* disable with SDIS ...:LCCError:Status
+# We must be able to send commands to LCC to clear errors even when error intlk set
+# If it is necessary to inhibit these *sometimes*, use upstream logic not SDIS
+
+record(stringin, "LCC:SendCal") {
+  field(SCAN, "Passive") # FIXME Test in silver.  Live test, production use 1 sec
+  field(DTYP, "stream")
+  field(INP, "@lcc.proto sendcal lcc") # out OUT ALL, in to :Actual PVs
+  field(FLNK, "LCC:SendCalCalc") # set LCC intlk if poll fails
+}
+
+record(stringin, "LCC:ReadBackCal") {
+  field(SCAN, "Passive") # FIXME Test in silver.  Live test, production use 1 sec
+  field(DTYP, "stream")
+  field(INP, "@lcc.proto readbackcal lcc") # out OUT ALL, in to :Actual PVs
+  field(FLNK, "LCC:ReadBackCalCalc") # set LCC intlk if poll fails
+}
+
+record(stringin, "LCC:SelectField") {
+  field(SCAN, "Passive") # FIXME Test in silver.  Live test, production use 1 sec
+  field(DTYP, "stream")
+  field(INP, "@lcc.proto selectfield lcc") # out OUT ALL, in to :Actual PVs
+  field(FLNK, "LCC:SelectFieldCalc") # set LCC intlk if poll fails
+}
+
+record(stringin, "LCC:AutoSetup") {
+  field(SCAN, "Passive") # FIXME Test in silver.  Live test, production use 1 sec
+  field(DTYP, "stream")
+  field(INP, "@lcc.proto autosetup lcc") # out OUT ALL, in to :Actual PVs
+  field(FLNK, "LCC:AutoSetupCalc") # set LCC intlk if poll fails
+}
+
+# Interlock is clear if most recent command succeeded, NO_ALARM (zero)
+# a. transition from 0 0 to 1 0 or 0 1 should send 0
+# b. transition from 1 0 or 0 1 to  0 0 should send 1
+# c. transition from 1 0 or 0 1 to  1 1 should remain at 0
+# d. transition from 1 1 to 1 0 or 0 1 should send 1
+# Look at a vs d - we can't do it with boolean expression - it's history dependent
+# We need *individual* calcout for both :Reset and :Poll
+
+# Set interlock if most recent command failed, *not* NO_ALARM (nonzero)
+record(calcout, "LCC:ResetCalc") {
+  field(INPA, "LCC:Reset.STAT")
+  field(CALC, "!A") # 0 means NO_ALARM but 1 means interlock clear (safe)
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "LCCError:Status PP")
+}
+
+# Set interlock if most recent command failed, *not* NO_ALARM (nonzero)
+record(calcout, "LCC:PollCalc") {
+  field(INPA, "LCC:Poll.STAT")
+  field(CALC, "!A") # 0 means NO_ALARM but 1 means interlock clear (safe)
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "LCCError:Status PP")
+}
+
+record(calcout, "LCC:SendCalCalc") {
+  field(INPA, "LCC:SendCal.STAT")
+  field(CALC, "!A") # 0 means NO_ALARM but 1 means interlock clear (safe)
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "LCCError:Status PP")
+}
+
+record(calcout, "LCC:ReadBackCalCalc") {
+  field(INPA, "LCC:ReadBackCal.STAT")
+  field(CALC, "!A") # 0 means NO_ALARM but 1 means interlock clear (safe)
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "LCCError:Status PP")
+}
+
+record(calcout, "LCC:SelectFieldCalc") {
+  field(INPA, "LCC:SelectField.STAT")
+  field(CALC, "!A") # 0 means NO_ALARM but 1 means interlock clear (safe)
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "LCCError:Status PP")
+}
+
+record(calcout, "LCC:AutoSetupCalc") {
+  field(INPA, "LCC:AutoSetup.STAT")
+  field(CALC, "!A") # 0 means NO_ALARM but 1 means interlock clear (safe)
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "LCCError:Status PP")
+}
+
+# For testing alarm .STAT -> Calc -> LCCError via caput
+record(bo, "LCC:Alarm") {
+    field(ZNAM, "zero, no alarm")
+    field(ONAM, "one, minor alarm")
+    field(ZSV, "NO_ALARM")
+    field(OSV, "MINOR")
+#    field(VAL, "0")
+#    field(PINI, "1") # so .STAT is initially NO_ALARM not UDF
+    field(FLNK, "LCC:AlarmCalc") # set LCC intlk if poll fails
+}
+
+# Set interlock if :Alarm is in an alarm state, *not* NO_ALARM (nonzero)
+record(calcout, "LCC:AlarmCalc") {
+  field(INPA, "LCC:Alarm.STAT")
+  field(CALC, "!A") # 0 means NO_ALARM but 1 means interlock clear (safe)
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "LCCError:Status PP")
+}
+
+# LCC interlocks, moved here from sw_interlock.substitutions on 12 Sep 2013
+
+record(bo, "LCCError:Status")
+{ 
+    field(DESC,"No LCC Error")
+    field(ZNAM,"LCC Error") # interlock set condition, opposite of DESC
+    field(ONAM,"No LCC Error") # usually the same as DESC but only string[20]
+    field(FLNK, "LCCError:Fanout")
+}
+
+record(fanout, "LCCError:Fanout") {
+    field(LNK1, "LCC:PollDisable") 
+    field(LNK2, "Subsystem:Calc")
+    field(SELM, "All")
+    # up to 6 LNK
+}
+
+record(bo, "LCCSetup:Status")
+{ 
+    field(DESC,"No LCC Auto Set-Up")
+    field(ZNAM,"LCC Auto Set-Up") # interlock set condition, opposite of DESC
+    field(ONAM,"No LCC Auto Set-Up") # usually the same as DESC but only string[20]
+    field(FLNK, "LCCSetup:Fanout")
+}
+
+record(fanout, "LCCSetup:Fanout") {
+    field(LNK1, "LCC:PollDisable") 
+    field(LNK2, "Subsystem:Calc")
+    field(SELM, "All")
+    # up to 6 LNK
+}
+
+record(bo, "LCCCal:Status")
+{ 
+    field(DESC,"Leaf Calibration Available")
+    field(ZNAM,"No Leaf Calibration") # interlock set condition, opposite of DESC
+    field(ONAM,"Leaf Calibration OK") # usually the same as DESC but only string[20]
+    field(FLNK, "Subsystem:Calc")
+}
+
+record(bo, "LCCInit:Status")
+{ 
+    field(DESC,"LCC initialized")
+    field(ZNAM,"LCC init in progress") # interlock set condition, opposite of DESC
+    field(ONAM,"LCC initialized") # usually the same as DESC but only string[20]
+    field(FLNK, "LCCInit:Fanout")
+}
+
+record(fanout, "LCCInit:Fanout") {
+    field(LNK1, "LCC:PollDisable") 
+    field(LNK2, "Subsystem:Calc")
+    field(SELM, "All")
+    # up to 6 LNK
+}
+
+# gets LNK from NewField:Fanout in session.db
+record(seq, "Session:NewField:Seq") {
+  field(SELM, "All")
+  field(DOL1, "0") # Set the interlock
+  field(LNK1, "LCCInit:Status") # 0 indicates initialization in progress
+  field(DOL2, "' '") # Indicate initialization has started
+  field(LNK2, "LCC:CalDone.AA") # ' ' indicates initialization in progress
+  # up to 10 DOL/LNK pairs
+}
+
+# lcc.proto readbackcal protocol assigns AA field here
+#  assigns AA to ' ' when protocol begins select field, assigns '$' when window protocol done.
+# It is like an INPA link from LCC:SelectField but there is no explicit INPA field here
+# This record sends 1 to OUT, LCCInit:Status when select field protocol completes
+# To make sure this record processes when it is needed, SCAN must poll
+record(scalcout, "LCC:CalDone") {
+  field(SCAN, "1 second") # Is this necessary?  Can't lcc.proto write to some .PROC ?
+  field(AA, " ") # space, ack character - indicates CON RUN has *not* completed
+  field(CALC, "AA=='$'")  # Pos logic, goes to 1 to indicate protocol has completed
+  field(DOPT, "Use OCAL") # for some reason sending CALC 1 gets error from LCCInit:Status:
+  field(OCAL, "'LCC initialized'") # Illegal choice PV: Iso:Collimator:LCCInit:Status 1.00000000
+  field(OOPT, "Transition To Non-zero") # only when "$" arrives
+  # send 1 to ...
+  field(OUT, "LCCInit:Status PP")
+  field(PINI, "1")
+}

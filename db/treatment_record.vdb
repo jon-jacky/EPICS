@@ -1,0 +1,210 @@
+# Treatment record and accumulations items
+# renamed treatment.db -> treatment_record.db 18 Nov 2013
+# also move out treatment sequence records to new treatment.db
+
+# Fanout to save accum records, treatment records and treatment autosave file
+# Triggered by FLNK to here from Dosimetry:TotalDose:Calc in treatment.db
+record(fanout, "Finished:Fanout"){
+  # Enable edmFilters with this LNK1
+  field(LNK1, "Dosimetry:Command:Calc")
+  # Disable .proto exec system by commenting out this LNK1
+  # field(LNK1, "StoreAccum:Command:Calc")
+  # Treatment records also
+  field(LNK2, "Event:Calc")
+  field(LNK3,  "DoseWarning:Calc")
+  field(SELM, "All")
+  # up to 6 LNK
+}
+
+record(scalcout, "DoseWarning:Calc") {
+    field(INPA, "TerminationCode")
+    field(AA, "msg_dose_warning.edl")
+    field(CALC, "A")
+    field(OCAL, "AA")
+    field(OOPT, "When Non-zero")
+    field(DOPT, "Use OCAL")
+    field(OUT, "UI:Panel:Request PP")
+}
+
+# Intercept timer enabled samples so :Event:Calc only sees transitions
+record(calcout, "DMCTimerAEnabled:Calc"){
+  field(INPA, "DMCTimerAEnabled:Status")
+  field(CALC, "A")
+  field(OOPT, "On Change")
+  field(DOPT, "Use CALC")
+  field(OUT, "Event:Calc.PROC PP")
+}
+
+record(calcout, "Event:Calc"){
+  field(INPA, "Phase") # Race condition?
+  field(INPB, "DMCTimerAEnabled:Status")
+  # Phase 4 Ready, 11 Term.Wait  Event 1 Beam on, 2 Beam off, 3 Run finished
+  field(CALC, "A<4?0:(A>11?3:(B?1:2))")
+  field(OOPT, "When Non-zero")
+  field(DOPT, "Use CALC")
+  field(OUT, "Event PP")
+  field(FLNK, "RecordNumber:Calc")
+}
+
+# Reset to 0 each day in prescription.py put_accumulations, then count up
+record(calcout, "RecordNumber:Calc"){
+  field(INPA, "RecordNumber")
+  field(CALC, "A+1") # reset to 0 in prescription.py put_accumulations
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "RecordNumber PP")
+  field(FLNK, "Records:Fanout")
+}
+
+# Fanout to save treatment records and treatment autosave file but *not* accum records
+record(fanout, "Records:Fanout"){
+  # Postrges database treatment record
+  # Enable edmFilters with this LNK1
+  # 13-Jan-2014 we found that commenting this out *does* reduce white screen/delay
+  # 23-Jul-2014 try uncommenting this and changing order of cmds in therapy.sh
+  field(LNK1, "Command:Calc")
+  # Disable .proto exec system by commenting out this LNK1
+  # field(LNK1, "StoreTreatment:Command:Calc")
+  # autosave treatment record
+  # 13-Jan-2014 we found that commenting this out does *not* reduce white screen/delay
+  field(LNK2, "Save:Calc")
+  field(SELM, "All")
+  # up to 6 LNK
+}
+
+# Treatment autosave
+
+# Autosave a treatment record file each time Records:Fanout processes
+record(calcout, "Save:Calc"){
+  field(INPA, "RecordNumber")
+  field(CALC, "A")
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "Save PP")
+}
+
+# Each time VAL changes, autosave writes treatment record file
+record(longout, "Save") {
+  field(DESC, "PV named in create_triggered_set()")
+}
+
+# generate filename for autosave treatment record file
+# based on Session:TimeStamp in session.db
+# each saved file gets unique name with embedded date/time stamp
+record(stringin, "SaveName") {
+  field(DESC, "SAVENAMEPV in create_triggered_set()")
+  field(SCAN, "1 second")
+  field(DTYP, "Soft Timestamp")
+  field(INP, "@isotr%Y-%m-%d-%H%M%S.sav") # C strftime format
+}
+
+# Save accumulation records and treatment records using edmFilters mechanism
+# For an alternative using .proto with exec 'system ...' see treatment_proto.db
+# but it did not work
+
+# Update accumulation record in database each time Records:Fanout processes
+record(scalcout, "Dosimetry:Command:Calc"){
+  field(INPA, "$(ROOM):Session:Mode") # 0 ZNAM Therapy, 1 ONAM Experiment
+  field(AA, "accumulation.sh")
+  field(CALC, "A")
+  field(OCAL, "AA")
+  field(OOPT, "When Zero")
+  field(DOPT, "Use OCAL")
+  field(OUT, "Dosimetry:Command PP")
+}
+
+# This PV is the filePv in an EDM embedded window
+# assign treatment.sh to this PV to invoke that command via edmFilters
+record(stringout, "Dosimetry:Command") {
+  field(DESC, "Accumulation record command")
+  field(VAL, "no_command.edl")  # initially no command
+}
+
+# Store a treatment record in database each time Records:Fanout processes
+record(scalcout, "Command:Calc"){
+  field(AA, "treatment.sh")
+  field(CALC, "AA")
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "Command PP")
+}
+
+# This PV is the filePv in an EDM embedded window
+# assign treatment.sh to this PV to invoke that command via edmFilters
+record(stringout, "Command") {
+  field(DESC, "Treatment record command")
+  field(VAL, "no_command.edl")  # initially no command
+}
+
+# end of records that control storage, data records follow
+
+record(mbbo, "Event"){
+  field(DESC, "Treatment event")
+  field(VAL, 0)         # Test
+  field(ZRST, "Test")   # for example when written on demand not by IOC event
+  field(ONST, "Beam on")
+  field(TWST, "Beam off")
+  field(THST, "Run finished")
+}
+
+# Treatment record serial number 
+# There might be multiple records for a control point
+
+record(longout, "RecordNumber"){
+  field(DESC, "Treatment record serial number")
+  field(VAL, 0) # reset to 0 each day for each field
+}
+
+record(longout, "Session:Field:ControlPoint"){
+  field(DESC, "Referenced Control Point Index 300C,00F0") # 40 char limit
+  field(VAL, 0) # 0-based, 0 is first Beam On, 1 is first Beam Off
+} 
+
+# These Reference PVs are not used by IOC for control
+#  but can be used in postgres database 
+#  to relate treatment records to prescription records.
+# They are written to treatment records so must be stored in IOC.
+
+record(longout, "Dosimetry:FractionGroup:Reference"){
+  field(DESC, "Referenced Fraction Group Num. 300C,0022")
+  field(VAL, 1) # fraction group array is 1-based, not 0-based
+}
+
+record(longout, "FilterWedge:WedgeNumber:Reference"){
+  field(DESC, "Wedge Number, DICOM (300A,00D2)")
+  field(VAL, -1) # 0-based, -1 means no wedge in this field
+}
+
+# For treatment records
+
+record(mbbo, "DeliveryType"){
+  field(DESC, "Treatment Delivery Type, DICOM 300A,00CE")
+  field(VAL, 0) # TREATMENT
+  # from the DICOM standard, in order
+  field(ZRST, "TREATMENT")
+  field(ONST, "OPEN_PORTFILM")
+  field(TWST, "TRMT_PORTFILM")
+  field(THST, "CONTINUATION") # continuation of interrupted treatment
+  field(FRST, "SETUP") # no treatment beam is applied
+}
+
+record(mbbo, "TerminationStatus"){
+  field(DESC, "Treatment Termination Status 3008,002A")
+  field(VAL, 0) # NORMAL
+  # from the DICOM standard, in order
+  field(ZRST, "NORMAL") # terminated normally
+  field(ONST, "OPERATOR") # operator terminated treatment
+  field(TWST, "MACHINE") # machine terminated treatment
+  field(THST, "UNKNOWN") # status at termination unknown (this is a warning)
+}
+
+record(mbbo, "TerminationCode"){
+  field(DESC, "Treatment Termination Code 3008,002B")
+  field(VAL, 0) # NORMAL
+  # DICOM says this is machine-dependent
+  # Use Warning Flag from old CNTS accum.dat file
+  # See old CNTS operations manual, 4.3.6, Field Data Record
+  field(ZRST, "no error") # 'no warning' in old CNTS, but looks weird in logs
+  field(ONST, "warning")  # 'suspect' in old CNTS, ditto
+  field(TWST, "crashed")
+}

@@ -1,0 +1,68 @@
+# remove $(ROOM):Dosimetry:
+
+# dosimetry_setup.db - treatment sequence logic etc, invokes protocols in dmc.db
+
+# Calculate enabling conditions for Dosimetry subsystem AutoSetup
+# Too many conditions to fit into 40 char CALC limit so split into two records
+record(calcout, "Subsystem:AutoSetup") {
+  # all of these interlocks must be clear
+  field(INPA, "DMCError:Status")
+  field(INPB, "DMCSetup:Status")
+  field(INPC, "DMCCal:Status")
+  field(INPD, "PressTemp:Status")
+  field(CALC, "A&&B&&C&&D") # all interlocks clear
+  field(OOPT, "When Non-zero") # when CALC is True, that is when intlks clear
+  field(DOPT, "Use CALC")
+  field(OUT, "Subsystem:CheckUI.PROC PP") 
+}
+
+# FIXME still more enabling conditions: preset dose and time in range
+# Also, must provide dialogs about overrides, partial fractions etc.
+# But for now, just get dmc.proto autosetup started
+
+record(scalcout, "Subsystem:CheckUI") {
+  # one of these screens must be displayed
+  field(INAA, "$(ROOM):UI:Panel")
+  field(BB, "summary.edl")
+  field(CC, "dosimetry.edl")
+  field(DD, "plc_status.edl") # helpful for debugging
+  field(CALC, "AA==BB||AA==CC||AA==DD") # one of these screens is displayed
+  field(OOPT, "When Non-zero")
+  field(DOPT, "Use CALC")
+  # That's all the enabling conditions, now start
+  field(OUT, "$(ROOM):DMC:AutoSetup.PROC PP") 
+}
+
+# calculate preset dose and time frome prescribed daily dose
+# send output to preset, initially they are them, preset can be edited
+
+# Write to .PROC from Session:NewField:Fanout
+record(calcout, "RunDose:Computed") {
+  field(INPA, "DailyDose:Prescribed")
+  field(DESC, "Prescribed dose for the run")
+  field(CALC, "A")
+  field(DOPT, "Use CALC")
+  field(OOPT, "Every Time")
+  field(OUT, "RunDose:Preset PP")
+  field(FLNK, "Time:Computed") 
+}
+
+# FLNK from Dosimetry:RunDose:Preset
+record(calcout, "Time:Computed") {
+  field(DESC, "Backup time for the run")
+  field(PREC, "2")
+  field(EGU, "min")
+  field(INPA, "RunDose:Preset") # MU
+  field(INPB, "DoseRate:Cal")   # MU/min
+  field(INPC, "TimeFactor:Cal") # unitless
+  field(D, "0.5") # minimum time in minutes
+  field(CALC, "E:=C*A/B;E>D?E:D")
+  field(DOPT, "Use CALC")
+  field(OOPT, "Every Time")
+  field(OUT, "Time:Preset PP")
+}
+
+# prevent error messages, temporarily FLNK etc to here
+record(bo, "Iso:Nowhere") {
+  field(DESC, "Dummy destination for FLNK")
+}

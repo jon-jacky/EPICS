@@ -1,0 +1,122 @@
+#  edit from mod2_calc_outputs.db, change each field(NELM, 28) to ..."28"
+
+# Pack bo bits into waveform record for output to Modicon via asyn
+
+# Just make a word from the 12 bits at coils 803..805 ... 813..821
+#  with 7 always-zero bits between 805 and 813 for spacing
+# CONFIRM MOD2 DOES NOT USE THOSE BITS!
+# CALC field is only STRING[36] so we can only pack three bits per acalcout record
+#  with double-digit array indices we can only pack two!
+# field(CALC, "ARR(A){0,1}+ARR(B){1,2}+ARR(C){2,3}") # 35 char
+
+record(acalcout, "MOD2:Waveform:Slice0:Calc") {
+  field(SCAN, ".1 second") # Passive requires bo bits to all have OUT fields
+  field(NELM, "28") # 3 bits 803..805 + 7 empty bits 806..812 + 18 bits 813..830
+  field(CALC, "ARR(A){0,1}+ARR(B){1,2}+ARR(C){2,3}") # 35 char
+  # from motion_request.substitutions
+  field(INPA, "MOD2:Coil0803:Write")  # WedgeRot
+  field(INPB, "MOD2:Coil0804:Write")  # WedgeType
+  field(INPC, "MOD2:Coil0805:Write")  # FlatFilter
+}
+
+record(acalcout, "MOD2:Waveform:Slice1:Calc") {
+  field(SCAN, ".1 second") # Passive requires bo bits to all have OUT fields
+  field(NELM, "28") # 3 bits 803..805 + 7 empty bits 806..812 + 18 bits 813..830
+  field(CALC, "ARR(A){10,11}+ARR(B){11,12}") # 27 char
+  # from xray_output.substitutions
+  field(INPA, "MOD2:Coil0813:Write") # LeafMotion
+  field(INPB, "MOD2:Coil0814:Write") # XRayPanel:10x10
+}
+
+record(acalcout, "MOD2:Waveform:Slice2:Calc") {
+  field(SCAN, ".1 second") # Passive requires bo bits to all have OUT fields
+  field(NELM, "28") # 3 bits 803..805 + 7 empty bits 806..812 + 18 bits 813..830
+  field(CALC, "ARR(A){12,13}+ARR(B){13,14}") # 27 char
+  # from xray_output.substitutions
+  field(INPA, "MOD2:Coil0815:Write") # XRayPanel:16x16
+  field(INPB, "MOD2:Coil0816:Write") # XRayPanel:20x20
+}
+
+record(acalcout, "MOD2:Waveform:Slice3:Calc") {
+  field(SCAN, ".1 second") # Passive requires bo bits to all have OUT fields
+  field(NELM, "28") # 3 bits 803..805 + 7 empty bits 806..812 + 18 bits 813..830
+  field(CALC, "ARR(A){14,15}+ARR(B){15,16}") # 27 char
+  # from xray_output.substitutions
+  field(INPA, "MOD2:Coil0817:Write") # XRayPanel:24x24
+  field(INPB, "MOD2:Coil0818:Write") # XRayPanel:28x32
+}
+
+record(acalcout, "MOD2:Waveform:Slice4:Calc") {
+  field(SCAN, ".1 second") # Passive requires bo bits to all have OUT fields
+  field(NELM, "28") # 3 bits 803..805 + 7 empty bits 806..812 + 18 bits 813..830
+  field(CALC, "ARR(A){16,17}+ARR(B){17,18}") # 27 char
+  # from xray_output.substitutions
+  field(INPA, "MOD2:Coil0819:Write") # XRayPanel:Prescribed
+  # from motion_request.substitutions
+  field(INPB, "MOD2:Coil0820:Write") # WedgeTypeNone
+}
+
+record(acalcout, "MOD2:Waveform:Slice5:Calc") {
+  field(SCAN, ".1 second") # Passive requires bo bits to all have OUT fields
+  field(NELM, "28") # 3 bits 803..805 + 7 empty bits 806..812 + 18 bits 813..830
+  field(CALC, "ARR(A){18,19}+ARR(B){19,20}") # 27 char
+  # from motion_request.substitutions
+  field(INPA, "MOD2:Coil0821:Write") # WedgeType30
+  field(INPB, "MOD2:Coil0822:Write") # WedgeType45
+}
+
+record(acalcout, "MOD2:Waveform:Slice6:Calc") {
+  field(SCAN, ".1 second") # Passive requires bo bits to all have OUT fields
+  field(NELM, "28") # 3 bits 803..805 + 7 empty bits 806..812 + 18 bits 813..830
+  field(CALC, "ARR(A){20,21}+ARR(B){21,22}") # 27 char
+  # from motion_request.substitutions
+  field(INPA, "MOD2:Coil0823:Write") # WedgeType60
+  field(INPB, "MOD2:Coil0824:Write") # WedgeRot0
+}
+
+record(acalcout, "MOD2:Waveform:Slice7:Calc") {
+  field(SCAN, ".1 second") # Passive requires bo bits to all have OUT fields
+  field(NELM, "28") # 3 bits 803..805 + 7 empty bits 806..812 + 18 bits 813..830
+  field(CALC, "ARR(A){22,23}+ARR(B){23,24}") # 27 char
+  # from motion_request.substitutions
+  field(INPA, "MOD2:Coil0825:Write") # WedgeRot90
+  field(INPB, "MOD2:Coil0826:Write") # WedgeRot180
+}
+
+record(acalcout, "MOD2:Waveform:Slice8:Calc") {
+  field(SCAN, ".1 second") # Passive requires bo bits to all have OUT fields
+  field(NELM, "28") # 3 bits 803..805 + 7 empty bits 806..812 + 18 bits 813..830
+  field(CALC, "ARR(A){24,25}+ARR(B){25,26}") # 27 char
+  # from motion_request.substitutions
+  field(INPA, "MOD2:Coil0827:Write") # WedgeRot270
+  field(INPB, "MOD2:Coil0828:Write") # FlatFilterLarge
+}
+
+record(acalcout, "MOD2:Waveform:Slice9:Calc") {
+  field(SCAN, ".1 second") # Passive requires bo bits to all have OUT fields
+  field(NELM, "28") # 3 bits 803..805 + 7 empty bits 806..812 + 18 bits 813..830
+  field(CALC, "ARR(A){26,27}+ARR(B){27,28}") # 27 char
+  # from motion_request.substitutions
+  field(INPA, "MOD2:Coil0829:Write") # FlatFilterSmall
+  field(INPB, "MOD2:Coil0830:Write") # FlatFilterNone
+}
+
+record(acalcout, "MOD2:Waveform:Merge:Calc") {
+  field(SCAN, ".1 second") # Passive requires bo bits to all have OUT fields
+  field(NELM, "28") # 3 bits 803..805 + 7 empty bits 806..812 + 18 bits 813..830
+  field(CALC, "AA+BB+CC+DD+EE+FF+GG+HH+II+JJ") # array addition, 30 char
+  field(OOPT, "Every Time") # Do we need these? Other acalcout records don't
+  field(DOPT, "Use CALC")
+  field(OUT, "MOD2:CnOutWArray.VAL PP NMS")
+  # inputs
+  field(INAA, "MOD2:Waveform:Slice0:Calc.AVAL")
+  field(INBB, "MOD2:Waveform:Slice1:Calc.AVAL")
+  field(INCC, "MOD2:Waveform:Slice2:Calc.AVAL")
+  field(INDD, "MOD2:Waveform:Slice3:Calc.AVAL")
+  field(INEE, "MOD2:Waveform:Slice4:Calc.AVAL")
+  field(INFF, "MOD2:Waveform:Slice5:Calc.AVAL")
+  field(INGG, "MOD2:Waveform:Slice6:Calc.AVAL")
+  field(INHH, "MOD2:Waveform:Slice7:Calc.AVAL")
+  field(INII, "MOD2:Waveform:Slice8:Calc.AVAL")
+  field(INJJ, "MOD2:Waveform:Slice9:Calc.AVAL")
+}

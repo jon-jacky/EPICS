@@ -1,0 +1,29 @@
+# one-of-a-kind records created by hand for the Filter/Wedge subsystem
+
+# Fan out from EDM auto setup button to all subsystem setting auto setups
+record(fanout, "Subsystem:AutoSetup") {
+  field(SELM, "All")
+  field(LNK1, "WedgeRot:AutoSetup")
+  field(LNK2, "WedgeType:AutoSetup")
+  field(LNK3, "FlatFilter:AutoSetup")
+  # up to 6 LNK
+}
+
+# Auto Setup interlock
+record(calcout, "FWSetup:Calc") {
+  field(INPA, "WedgeTypeNone:RequestEnabled") 
+  field(INPB, "WedgeType30:RequestEnabled") 
+  field(INPC, "WedgeType45:RequestEnabled") 
+  field(INPD, "WedgeType60:RequestEnabled") 
+  field(INPE, "WedgeRot0:RequestEnabled") 
+  field(INPF, "WedgeRot90:RequestEnabled") 
+  field(INPG, "WedgeRot180:RequestEnabled") 
+  field(INPH, "WedgeRot270:RequestEnabled") 
+  field(INPI, "FlatFilterNone:RequestEnabled") 
+  field(INPJ, "FlatFilterSmall:RequestEnabled") 
+  field(INPK, "FlatFilterLarge:RequestEnabled") 
+  field(CALC, "!(A||B||C||D||E||F||G||H||I||J||K)") # any RequestEnabled is on, then invert
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "FWSetup:Status PP")
+}

@@ -1,0 +1,268 @@
+# remove $(ROOM="Iso")$(SUBSYSTEM), replace $(SETTING) with Subsystem
+
+record(calc, "MotionSafety:Status"){
+  # motion safety calc follows here, uses different motions for every subsystem
+  field(INPA, "WedgeType:DriveEnabled")  # 0 means DISABLED
+  field(INPB, "WedgeRot:DriveEnabled")
+  field(INPC, "FlatFilter:DriveEnabled") 
+  field(INPD, "WedgeType:ErrorOK")       # 1 means OK
+  field(INPE, "WedgeRot:ErrorOK")
+  field(INPF, "FlatFilter:ErrorOK")
+  field(CALC, "!A&&!B&&!C&&D&&E&&F") # all DISABLED,OK
+  field(FLNK, "CheckConfirm:Status")
+}
+record(calc, "Settings:Readiness") {
+  # settings and merged calc follows here, different settings for every subsystem
+  field(INPA, "WedgeType:Readiness")
+  field(INPB, "WedgeRot:Readiness")
+  field(INPC, "FlatFilter:Readiness")
+  field(CALC, "MIN(A,B,C)") # A,B,C might each be 0,1,2
+  field(FLNK, "CheckConfirm:Status")
+}
+
+record(calc, "CheckConfirm:Status"){
+  field(INPA, "Settings:Readiness")
+  # check-and-confirm calc follows here, possibly including :MotionSafety
+  # INPA :Settings:Readiness might be 0,1,2 but treat as boolean here
+  field(INPB, "MotionSafety:Status")
+  # INPB :MotionSafety is boolean 0,1
+  field(CALC, "A&&B")
+  field(FLNK, "Subsystem:Calc")
+}
+
+record(calc, "Subsystem:Calc"){
+  # subsystem readiness calc follows here, different for every subsystem
+  field(INPA, "Settings:Readiness")
+  field(INPB, "CheckConfirm:Status")
+  field(INPC, "FWSetup:Status")
+  field(INPD, "Fault:Status")
+  field(CALC, "(B&&C&&D)?A:0")
+  field(FLNK, "Subsystem:Readiness")
+}
+
+record(mbbo, "Subsystem:Readiness") {
+  field(DESC, "$(DESC)")
+  field(VAL, "$(VAL=0)")  # initially NOT READY
+  field(ZRST, "NOT READY")
+  field(ONST, "OVERRIDE")
+  field(TWST, "READY")
+  field(DOL, "Subsystem:Calc") 
+  field(OMSL, "closed_loop") # needed for DOL
+}
+# remove Iso:FilterWedge: throughout
+
+record(calc, "WedgeType:Encode") {
+  field(DESC, "WEDGE TYPE")
+  field(INPA, "WedgeTypeNone:Achieved")
+  field(INPB, "WedgeType30:Achieved")
+  field(INPC, "WedgeType45:Achieved")
+  field(INPD, "WedgeType60:Achieved")
+  field(CALC, "A?0:B?1:C?2:D?3:4") # 40 char limit
+  field(FLNK, "WedgeType:Actual")
+}
+
+
+record(mbbo, "WedgeType:Prescribed") {
+  field(DESC, "WEDGE TYPE")
+  field(ZRST, "NONE")
+  field(ONST, "30 deg")
+  field(TWST, "45 deg")
+  field(THST, "60 deg")
+  field(FRST, "***")
+  field(FVST, "INVALID")
+  field(FLNK, "WedgeType:Calc")
+}
+
+
+record(mbbo, "WedgeType:Actual") {
+  field(DESC, "WEDGE TYPE")
+  field(ZRST, "NONE")
+  field(ONST, "30 deg")
+  field(TWST, "45 deg")
+  field(THST, "60 deg")
+  field(FRST, "***")
+  field(FVST, "INVALID")
+  field(DOL, "WedgeType:Encode") 
+  field(OMSL, "closed_loop") # needed for DOL
+  field(FLNK, "WedgeType:Calc")
+}
+
+
+record(calc, "WedgeType:Calc"){
+  field(INPA, "WedgeType:Prescribed")
+  field(INPB, "WedgeType:Actual")
+  field(CALC, "(A=B)?2:0")
+
+  field(FLNK, "WedgeType:CalcOverride")
+}
+
+record(bo, "WedgeType:Override"){
+  field(ZNAM, "Not overridden")
+  field(ONAM, "Overridden")
+  field(FLNK, "WedgeType:CalcOverride")
+}
+
+# needed because in :Calc, CALC might be too long to include :Override 
+record(calc, "WedgeType:CalcOverride"){
+  field(INPA, "WedgeType:Calc")
+  field(INPB, "WedgeType:Override")
+  field(CALC, "B?1:A")
+  field(FLNK, "WedgeType:Readiness")
+}
+
+
+record(mbbo, "WedgeType:Readiness") {
+  field(DESC, "WEDGE TYPE")
+  field(VAL, "0")  # initially NOT READY
+  field(ZRST, "NOT READY")
+  field(ONST, "OVERRIDE")
+  field(TWST, "READY")
+  field(DOL, "WedgeType:CalcOverride") 
+  field(OMSL, "closed_loop") # needed for DOL
+field(FLNK,  "Settings:Readiness")
+}
+
+
+record(calc, "WedgeRot:Encode") {
+  field(DESC, "WEDGE ROT")
+  field(INPA, "WedgeRot0:Achieved")
+  field(INPB, "WedgeRot90:Achieved")
+  field(INPC, "WedgeRot180:Achieved")
+  field(INPD, "WedgeRot270:Achieved")
+  field(CALC, "A?0:B?1:C?2:D?3:4") # 40 char limit
+  field(FLNK, "WedgeRot:Actual")
+}
+
+
+record(mbbo, "WedgeRot:Prescribed") {
+  field(DESC, "WEDGE ROT")
+  field(ZRST, "  0 deg")
+  field(ONST, " 90 deg")
+  field(TWST, "180 deg")
+  field(THST, "270 deg")
+  field(FRST, "***")
+  field(FVST, "INVALID")
+  field(FLNK, "WedgeRot:Calc")
+}
+
+
+record(mbbo, "WedgeRot:Actual") {
+  field(DESC, "WEDGE ROT")
+  field(ZRST, "  0 deg")
+  field(ONST, " 90 deg")
+  field(TWST, "180 deg")
+  field(THST, "270 deg")
+  field(FRST, "***")
+  field(FVST, "INVALID")
+  field(DOL, "WedgeRot:Encode") 
+  field(OMSL, "closed_loop") # needed for DOL
+  field(FLNK, "WedgeRot:Calc")
+}
+
+
+record(calc, "WedgeRot:Calc"){
+  field(INPA, "WedgeRot:Prescribed")
+  field(INPB, "WedgeRot:Actual")
+  field(CALC, "(A=B)?2:0")
+
+  field(FLNK, "WedgeRot:CalcOverride")
+}
+
+record(bo, "WedgeRot:Override"){
+  field(ZNAM, "Not overridden")
+  field(ONAM, "Overridden")
+  field(FLNK, "WedgeRot:CalcOverride")
+}
+
+# needed because in :Calc, CALC might be too long to include :Override 
+record(calc, "WedgeRot:CalcOverride"){
+  field(INPA, "WedgeRot:Calc")
+  field(INPB, "WedgeRot:Override")
+  field(CALC, "B?1:A")
+  field(FLNK, "WedgeRot:Readiness")
+}
+
+
+record(mbbo, "WedgeRot:Readiness") {
+  field(DESC, "WEDGE ROT")
+  field(VAL, "0")  # initially NOT READY
+  field(ZRST, "NOT READY")
+  field(ONST, "OVERRIDE")
+  field(TWST, "READY")
+  field(DOL, "WedgeRot:CalcOverride") 
+  field(OMSL, "closed_loop") # needed for DOL
+field(FLNK,  "Settings:Readiness")
+}
+
+
+record(calc, "FlatFilter:Encode") {
+  field(DESC, "FILTER")
+  field(INPA, "FlatFilterNone:Achieved")
+  field(INPB, "FlatFilterLarge:Achieved")
+  field(INPC, "FlatFilterSmall:Achieved")
+  field(INPD, "Placeholder:Achieved")
+  field(CALC, "A?0:B?1:C?2:3") # 40 char limit
+  field(FLNK, "FlatFilter:Actual")
+}
+
+
+record(mbbo, "FlatFilter:Prescribed") {
+  field(DESC, "FILTER")
+  field(ZRST, "NONE")
+  field(ONST, "LARGE")
+  field(TWST, "SMALL")
+  field(THST, "***")
+  field(FRST, "Placeholder")
+  field(FVST, "INVALID")
+  field(FLNK, "FlatFilter:Calc")
+}
+
+
+record(mbbo, "FlatFilter:Actual") {
+  field(DESC, "FILTER")
+  field(ZRST, "NONE")
+  field(ONST, "LARGE")
+  field(TWST, "SMALL")
+  field(THST, "***")
+  field(FRST, "Placeholder")
+  field(FVST, "INVALID")
+  field(DOL, "FlatFilter:Encode") 
+  field(OMSL, "closed_loop") # needed for DOL
+  field(FLNK, "FlatFilter:Calc")
+}
+
+
+record(calc, "FlatFilter:Calc"){
+  field(INPA, "FlatFilter:Prescribed")
+  field(INPB, "FlatFilter:Actual")
+  field(CALC, "(A=B)?2:0")
+
+  field(FLNK, "FlatFilter:CalcOverride")
+}
+
+record(bo, "FlatFilter:Override"){
+  field(ZNAM, "Not overridden")
+  field(ONAM, "Overridden")
+  field(FLNK, "FlatFilter:CalcOverride")
+}
+
+# needed because in :Calc, CALC might be too long to include :Override 
+record(calc, "FlatFilter:CalcOverride"){
+  field(INPA, "FlatFilter:Calc")
+  field(INPB, "FlatFilter:Override")
+  field(CALC, "B?1:A")
+  field(FLNK, "FlatFilter:Readiness")
+}
+
+
+record(mbbo, "FlatFilter:Readiness") {
+  field(DESC, "FILTER")
+  field(VAL, "0")  # initially NOT READY
+  field(ZRST, "NOT READY")
+  field(ONST, "OVERRIDE")
+  field(TWST, "READY")
+  field(DOL, "FlatFilter:CalcOverride") 
+  field(OMSL, "closed_loop") # needed for DOL
+field(FLNK,  "Settings:Readiness")
+}
+

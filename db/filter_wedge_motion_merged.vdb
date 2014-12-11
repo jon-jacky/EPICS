@@ -1,0 +1,554 @@
+# remove $(ROOM="Iso")$(SUBSYSTEM), replace $(SETTING) with Subsystem
+
+record(calc, "MotionSafety:Status"){
+  # motion safety calc follows here, uses different motions for every subsystem
+  field(INPA, "WedgeType:DriveEnabled")  # 0 means DISABLED
+  field(INPB, "WedgeRot:DriveEnabled")
+  field(INPC, "FlatFilter:DriveEnabled") 
+  field(INPD, "WedgeType:ErrorOK")       # 1 means OK
+  field(INPE, "WedgeRot:ErrorOK")
+  field(INPF, "FlatFilter:ErrorOK")
+  field(CALC, "!A&&!B&&!C&&D&&E&&F") # all DISABLED,OK
+  field(FLNK, "CheckConfirm:Status")
+}
+record(calc, "Settings:Readiness") {
+  # settings and merged calc follows here, different settings for every subsystem
+  field(INPA, "WedgeType:Readiness")
+  field(INPB, "WedgeRot:Readiness")
+  field(INPC, "FlatFilter:Readiness")
+  field(CALC, "MIN(A,B,C)") # A,B,C might each be 0,1,2
+  field(FLNK, "CheckConfirm:Status")
+}
+
+record(calc, "CheckConfirm:Status"){
+  field(INPA, "Settings:Readiness")
+  # check-and-confirm calc follows here, possibly including :MotionSafety
+  # INPA :Settings:Readiness might be 0,1,2 but treat as boolean here
+  field(INPB, "MotionSafety:Status")
+  # INPB :MotionSafety is boolean 0,1
+  field(CALC, "A&&B")
+  field(FLNK, "Subsystem:Calc")
+}
+
+record(calc, "Subsystem:Calc"){
+  # subsystem readiness calc follows here, different for every subsystem
+  field(INPA, "Settings:Readiness")
+  field(INPB, "CheckConfirm:Status")
+  field(INPC, "FWSetup:Status")
+  field(INPD, "Fault:Status")
+  field(CALC, "(B&&C&&D)?A:0")
+  field(FLNK, "Subsystem:Readiness")
+}
+
+record(mbbo, "Subsystem:Readiness") {
+  field(DESC, "$(DESC)")
+  field(VAL, "$(VAL=0)")  # initially NOT READY
+  field(ZRST, "NOT READY")
+  field(ONST, "OVERRIDE")
+  field(TWST, "READY")
+  field(DOL, "Subsystem:Calc") 
+  field(OMSL, "closed_loop") # needed for DOL
+}
+# remove Iso:FilterWedge: throughout
+
+record(calc, "WedgeType:Encode") {
+  field(DESC, "WEDGE TYPE")
+  field(INPA, "WedgeTypeNone:Achieved")
+  field(INPB, "WedgeType30:Achieved")
+  field(INPC, "WedgeType45:Achieved")
+  field(INPD, "WedgeType60:Achieved")
+  field(CALC, "A?0:B?1:C?2:D?3:4") # 40 char limit
+  field(FLNK, "WedgeType:Actual")
+}
+
+
+record(mbbo, "WedgeType:Prescribed") {
+  field(DESC, "WEDGE TYPE")
+  field(ZRST, "NONE")
+  field(ONST, "30 deg")
+  field(TWST, "45 deg")
+  field(THST, "60 deg")
+  field(FRST, "***")
+  field(FVST, "INVALID")
+  field(FLNK, "WedgeType:Calc")
+}
+
+
+record(mbbo, "WedgeType:Actual") {
+  field(DESC, "WEDGE TYPE")
+  field(ZRST, "NONE")
+  field(ONST, "30 deg")
+  field(TWST, "45 deg")
+  field(THST, "60 deg")
+  field(FRST, "***")
+  field(FVST, "INVALID")
+  field(DOL, "WedgeType:Encode") 
+  field(OMSL, "closed_loop") # needed for DOL
+  field(FLNK, "WedgeType:Calc")
+}
+
+
+record(calc, "WedgeType:Calc"){
+  field(INPA, "WedgeType:Prescribed")
+  field(INPB, "WedgeType:Actual")
+  field(CALC, "(A=B)?2:0")
+
+  field(FLNK, "WedgeType:CalcOverride")
+}
+
+record(bo, "WedgeType:Override"){
+  field(ZNAM, "Not overridden")
+  field(ONAM, "Overridden")
+  field(FLNK, "WedgeType:CalcOverride")
+}
+
+# needed because in :Calc, CALC might be too long to include :Override 
+record(calc, "WedgeType:CalcOverride"){
+  field(INPA, "WedgeType:Calc")
+  field(INPB, "WedgeType:Override")
+  field(CALC, "B?1:A")
+  field(FLNK, "WedgeType:Readiness")
+}
+
+
+record(mbbo, "WedgeType:Readiness") {
+  field(DESC, "WEDGE TYPE")
+  field(VAL, "0")  # initially NOT READY
+  field(ZRST, "NOT READY")
+  field(ONST, "OVERRIDE")
+  field(TWST, "READY")
+  field(DOL, "WedgeType:CalcOverride") 
+  field(OMSL, "closed_loop") # needed for DOL
+field(FLNK,  "Settings:Readiness")
+}
+
+
+record(calc, "WedgeRot:Encode") {
+  field(DESC, "WEDGE ROT")
+  field(INPA, "WedgeRot0:Achieved")
+  field(INPB, "WedgeRot90:Achieved")
+  field(INPC, "WedgeRot180:Achieved")
+  field(INPD, "WedgeRot270:Achieved")
+  field(CALC, "A?0:B?1:C?2:D?3:4") # 40 char limit
+  field(FLNK, "WedgeRot:Actual")
+}
+
+
+record(mbbo, "WedgeRot:Prescribed") {
+  field(DESC, "WEDGE ROT")
+  field(ZRST, "  0 deg")
+  field(ONST, " 90 deg")
+  field(TWST, "180 deg")
+  field(THST, "270 deg")
+  field(FRST, "***")
+  field(FVST, "INVALID")
+  field(FLNK, "WedgeRot:Calc")
+}
+
+
+record(mbbo, "WedgeRot:Actual") {
+  field(DESC, "WEDGE ROT")
+  field(ZRST, "  0 deg")
+  field(ONST, " 90 deg")
+  field(TWST, "180 deg")
+  field(THST, "270 deg")
+  field(FRST, "***")
+  field(FVST, "INVALID")
+  field(DOL, "WedgeRot:Encode") 
+  field(OMSL, "closed_loop") # needed for DOL
+  field(FLNK, "WedgeRot:Calc")
+}
+
+
+record(calc, "WedgeRot:Calc"){
+  field(INPA, "WedgeRot:Prescribed")
+  field(INPB, "WedgeRot:Actual")
+  field(CALC, "(A=B)?2:0")
+
+  field(FLNK, "WedgeRot:CalcOverride")
+}
+
+record(bo, "WedgeRot:Override"){
+  field(ZNAM, "Not overridden")
+  field(ONAM, "Overridden")
+  field(FLNK, "WedgeRot:CalcOverride")
+}
+
+# needed because in :Calc, CALC might be too long to include :Override 
+record(calc, "WedgeRot:CalcOverride"){
+  field(INPA, "WedgeRot:Calc")
+  field(INPB, "WedgeRot:Override")
+  field(CALC, "B?1:A")
+  field(FLNK, "WedgeRot:Readiness")
+}
+
+
+record(mbbo, "WedgeRot:Readiness") {
+  field(DESC, "WEDGE ROT")
+  field(VAL, "0")  # initially NOT READY
+  field(ZRST, "NOT READY")
+  field(ONST, "OVERRIDE")
+  field(TWST, "READY")
+  field(DOL, "WedgeRot:CalcOverride") 
+  field(OMSL, "closed_loop") # needed for DOL
+field(FLNK,  "Settings:Readiness")
+}
+
+
+record(calc, "FlatFilter:Encode") {
+  field(DESC, "FILTER")
+  field(INPA, "FlatFilterNone:Achieved")
+  field(INPB, "FlatFilterLarge:Achieved")
+  field(INPC, "FlatFilterSmall:Achieved")
+  field(INPD, "Placeholder:Achieved")
+  field(CALC, "A?0:B?1:C?2:3") # 40 char limit
+  field(FLNK, "FlatFilter:Actual")
+}
+
+
+record(mbbo, "FlatFilter:Prescribed") {
+  field(DESC, "FILTER")
+  field(ZRST, "NONE")
+  field(ONST, "LARGE")
+  field(TWST, "SMALL")
+  field(THST, "***")
+  field(FRST, "Placeholder")
+  field(FVST, "INVALID")
+  field(FLNK, "FlatFilter:Calc")
+}
+
+
+record(mbbo, "FlatFilter:Actual") {
+  field(DESC, "FILTER")
+  field(ZRST, "NONE")
+  field(ONST, "LARGE")
+  field(TWST, "SMALL")
+  field(THST, "***")
+  field(FRST, "Placeholder")
+  field(FVST, "INVALID")
+  field(DOL, "FlatFilter:Encode") 
+  field(OMSL, "closed_loop") # needed for DOL
+  field(FLNK, "FlatFilter:Calc")
+}
+
+
+record(calc, "FlatFilter:Calc"){
+  field(INPA, "FlatFilter:Prescribed")
+  field(INPB, "FlatFilter:Actual")
+  field(CALC, "(A=B)?2:0")
+
+  field(FLNK, "FlatFilter:CalcOverride")
+}
+
+record(bo, "FlatFilter:Override"){
+  field(ZNAM, "Not overridden")
+  field(ONAM, "Overridden")
+  field(FLNK, "FlatFilter:CalcOverride")
+}
+
+# needed because in :Calc, CALC might be too long to include :Override 
+record(calc, "FlatFilter:CalcOverride"){
+  field(INPA, "FlatFilter:Calc")
+  field(INPB, "FlatFilter:Override")
+  field(CALC, "B?1:A")
+  field(FLNK, "FlatFilter:Readiness")
+}
+
+
+record(mbbo, "FlatFilter:Readiness") {
+  field(DESC, "FILTER")
+  field(VAL, "0")  # initially NOT READY
+  field(ZRST, "NOT READY")
+  field(ONST, "OVERRIDE")
+  field(TWST, "READY")
+  field(DOL, "FlatFilter:CalcOverride") 
+  field(OMSL, "closed_loop") # needed for DOL
+field(FLNK,  "Settings:Readiness")
+}
+
+# started from motion_input_subs.db
+# remove all non-FilterWedge records: GantryCouch etc.
+# remove all "Iso:FilterWedge:"
+# change all field(VAL, 0) to field(VAL, "0")
+# change all alias(...) to #  alias(...) - comment them all out
+
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeRot:DriveEnabled") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 2 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"DISABLED")
+    field(ONAM,"ENABLED")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso WdgRot Disabled to VME")
+    field(FLNK,"MotionSafety:Status")  # is PP needed for FLNK?
+#   alias(MOD2:Coil0903:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeType:DriveEnabled") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 3 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"DISABLED")
+    field(ONAM,"ENABLED")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso WdgSel Disabled to VME")
+    field(FLNK,"MotionSafety:Status")  # is PP needed for FLNK?
+#   alias(MOD2:Coil0904:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"FlatFilter:DriveEnabled") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 4 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"DISABLED")
+    field(ONAM,"ENABLED")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Filter Disabled to VME")
+    field(FLNK,"MotionSafety:Status")  # is PP needed for FLNK?
+#   alias(MOD2:Coil0905:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeRot:ErrorOK") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 17 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"not OK")
+    field(ONAM,"OK")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso WRot Error Ok to VME")
+    field(FLNK,"MotionSafety:Status")  # is PP needed for FLNK?
+#   alias(MOD2:Coil0918:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeType:ErrorOK") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 18 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"not OK")
+    field(ONAM,"OK")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso WSel Error Ok to VME")
+    field(FLNK,"MotionSafety:Status")  # is PP needed for FLNK?
+#   alias(MOD2:Coil0919:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"FlatFilter:ErrorOK") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 19 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"not OK")
+    field(ONAM,"OK")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Filter Error Ok to VME")
+    field(FLNK,"MotionSafety:Status")  # is PP needed for FLNK?
+#   alias(MOD2:Coil0920:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# started from motion_achieved_subs.db
+# remove all "Iso:FilterWedge:"
+# change all field(VAL, 0) to field(VAL, "0")
+# change all alias(...) to #  alias(...) - comment them all out
+
+
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeTypeNone:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 89 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Wedge Type at None to VME")
+    field(FLNK,"WedgeType:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0990:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeType30:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 90 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Wedge Type at 30 to VME")
+    field(FLNK,"WedgeType:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0991:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeType45:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 91 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Wedge Type at 45 to VME")
+    field(FLNK,"WedgeType:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0992:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeType60:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 92 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Wedge Type at 60 to VME")
+    field(FLNK,"WedgeType:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0993:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeRot0:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 93 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Wedge Rot at 0 to VME")
+    field(FLNK,"WedgeRot:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0994:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeRot90:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 94 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Wedge Rot at 90 to VME")
+    field(FLNK,"WedgeRot:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0995:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeRot180:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 95 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Wedge Rot at 180 to VME")
+    field(FLNK,"WedgeRot:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0996:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeRot270:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 96 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Wedge Rot at 270 to VME")
+    field(FLNK,"WedgeRot:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0997:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"FlatFilterLarge:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 97 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Flat Filter at Large to VME")
+    field(FLNK,"FlatFilter:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0998:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"FlatFilterSmall:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 98 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Flat Filter at Small to VME")
+    field(FLNK,"FlatFilter:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil0999:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"FlatFilterNone:Achieved") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 99 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"False")
+    field(ONAM,"True")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Flat Filter at None to VME")
+    field(FLNK,"FlatFilter:Encode")  # is PP needed for FLNK?
+#    alias(MOD2:Coil1000:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}

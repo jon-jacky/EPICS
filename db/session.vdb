@@ -1,0 +1,133 @@
+# remove $(ROOM="Iso"): $(ROOM="Iso"):Session: $(ROOM):
+# replace 0) "0"), -9999) "-9999")%
+
+# Most session records are defined in session.substitutions
+
+# propagate new therapy/expt mode to patient and display
+record(seq, "NewMode:Seq") {
+  field(SELM, "All")
+  field(DOL1, "0") # just send to ...:Calc.PROC, :Calc has its own inputs
+  field(LNK1, "UI:Patients:Calc.PROC PP")
+  field(DOL2, "0") # No patient
+  field(LNK2, "Patient:Id PP MS")
+  # This just prints 0.00000 and 1.0000 in the log
+  #field(DOL3, "Mode")
+  #field(LNK3, "Log PP MS") # directly to :Log, no need to calc
+  field(DOL3, "0") # just send to ..:Log.PROC, has its own inputs
+  field(LNK3, "Mode:Log.PROC PP") 
+  # up to 10 DOL/LNK pairs
+}
+
+# propagate new patient to field and display
+record(seq, "NewPatient:Seq") {
+  field(SELM, "All")
+  field(DOL1, "0") # just send to ...:Calc.PROC, :Calc has its own inputs
+  field(LNK1, "UI:NewPatient:Calc.PROC PP")
+  field(DOL2, "0") # No field
+  field(LNK2, "Field:Plan PP MS")
+  # up to 10 DOL/LNK pairs
+}
+
+# propagate new field to display
+record(calcout, "NewField:Calc") {
+  field(INPA, "Field:Number")
+  field(CALC, "A")
+  field(OOPT, "On Change")
+  field(DOPT, "Use CALC") # Value doesn't matter, we just send to .PROC
+  field(OUT, "NewField:Fanout.PROC PP")
+}
+
+# FLNK to here from NewField:Calc
+record(fanout, "NewField:Fanout") {
+  field(LNK1, "UI:NewField:Calc")
+  field(LNK2, "TMC:Reset")
+  field(LNK3, "LCC:SelectField")
+  field(LNK4, "NewField:Seq")
+  field(LNK5, "DMC:Reset")
+  field(LNK6, "Dosimetry:RunDose:Computed")
+  field(SELM, "All")
+  # up to 6 LNK
+}
+
+
+# gets LNK from NewField:Fanout in session.db
+record(seq, "NewField:Seq") {
+  field(SELM, "All")
+  field(DOL1, "0") # Set the interlock, cleared by lcc.proto window protocol
+  field(LNK1, "Collimator:LCCBusy:Status") # 0 indicates initialization in progress
+  field(DOL3, "0")
+  field(LNK3, "Dosimetry:DoseA:Actual")
+  field(DOL4, "0")
+  field(LNK4, "Dosimetry:DoseB:Actual")
+  field(DOL5, "0")
+  field(LNK5, "Dosimetry:Time:Actual")
+  # up to 10 DOL/LNK pairs
+}
+
+# Following records propagate invalid values and alarms when no patient, no field
+
+# FLNK to here from Field:Number
+record(fanout, "Field:Fanout") {
+  field(LNK1, "NoField:Calc")
+  field(LNK2, "NewField:Calc") # above
+  field(SELM, "All")
+  # up to 6 LNK
+}
+
+# FLNK to here from Patient:Id
+record(fanout, "Patient:Fanout") {
+  field(LNK1, "NewPatient:Calc")
+  field(LNK2, "NoPatientNumber:Calc")
+  field(LNK3, "NoPatientName:Calc")
+  field(SELM, "All")
+  # up to 6 LNK
+}
+
+record(seq, "Subsystems0:NoField") {
+  field(SELM, "All")
+  field(DOL1, "0") # just send to ...:Calc.PROC, ...:Invalid uses its own DOLS
+  field(LNK1, "Subsystems1:NoField.PROC PP MS")
+  field(DOL2, "0") # just send to ...:Calc.PROC, ...:Calc uses its own .INPA
+  field(LNK2, "NoFieldName:Calc.PROC PP MS") # "No field"
+  field(DOL3, "-9999") # indicates INVALID for ai/ao, other numeric settings
+  field(LNK3, "GantryCouch:Gantry:Prescribed PP MS") # INVALID
+  field(DOL4, "-9999")
+  field(LNK4, "GantryCouch:Collimator:Prescribed PP MS") 
+  field(DOL5, "-9999")
+  field(LNK5, "GantryCouch:Turntable:Prescribed PP MS") 
+  field(DOL6, 5) # indicates INVALID in Filter/Wedge discrete setting, mbbo/mbbi
+  field(LNK6, "FilterWedge:WedgeType:Prescribed PP MS") # Illegal
+  field(DOL7, 5)
+  field(LNK7, "FilterWedge:WedgeRot:Prescribed PP MS")
+  field(DOL8, 5)
+  field(LNK8, "FilterWedge:FlatFilter:Prescribed PP MS")
+  # up to 10 DOL/LNK pairs
+}
+
+record(seq, "Subsystems1:NoField") {
+  field(SELM, "All")
+  field(DOL1, "-9999")
+  field(LNK1, "Dosimetry:DailyDose:Prescribed PP MS") 
+  field(DOL2, "-9999")
+  field(LNK2, "Dosimetry:TotalDose:Prescribed PP MS") 
+  field(DOL3, "-9999")
+  field(LNK3, "Dosimetry:Fractions:Prescribed PP MS") 
+  field(DOL4, "0") # just send to ...:Quad0:NoField.PROC, :Invalid uses its own DOLS
+  field(LNK4, "Collimator:Quad0:NoField.PROC PP MS")
+  field(DOL5, "0")
+  field(LNK5, "Collimator:Quad1:NoField.PROC PP MS")
+  field(DOL6, "0")
+  field(LNK6, "Collimator:Quad2:NoField.PROC PP MS")
+  field(DOL7, "0")
+  field(LNK7, "Collimator:Quad3:NoField.PROC PP MS")
+  # up to 10 DOL/LNK pairs
+}
+
+# timestamp
+# note default values for SYSTEM, SUBSYSTEM
+# "Iso" isocentric treatment room, "Fix" fixed beam room
+record(stringin, "TimeStamp") {
+  field(SCAN, "1 second")
+  field(DTYP, "Soft Timestamp")
+  field(INP, "@%d-%b-%Y %H:%M:%S")
+}

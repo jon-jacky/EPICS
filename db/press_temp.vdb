@@ -1,0 +1,441 @@
+# pressure/temperature factors, see also press_temp.substitutions
+# lots of repetition here - BUT probably not worth more .substitutions + .template
+
+# FLNK from Dosimetry:PressTemp:Array waveform record with raw data
+record(fanout, "PressTemp:Fanout"){
+    field(SELM, "All")
+    field(LNK1, "Pressure1:Sub0")
+    field(LNK2, "Pressure1:Sub1")
+    field(LNK3, "Pressure1:Sub2")
+    field(LNK4, "Pressure1:Sub3")
+    field(LNK5, "PressTemp:Fanout1")
+    # up to 6 LNK
+}
+
+record(fanout, "PressTemp:Fanout1"){
+    field(SELM, "All")
+    field(LNK1, "Pressure2:Sub5")
+    field(LNK2, "Pressure2:Sub6")
+    field(LNK3, "Pressure2:Sub7")
+    field(LNK4, "Pressure2:Sub8")
+    field(LNK5, "Temperature:Sub10")
+    field(LNK6, "Temperature:Sub11")
+    # up to 6 LNK
+}
+
+# Here is what the raw pressure and temperature data look like: 
+#
+# jon@therapy-control:~/therapyControl/lib/test$ caget Iso:Dosimetry:PressTemp:Array
+# Iso:Dosimetry:PressTemp:Array 12 14897 12336 14638 13100 20299 14897 12336 14638 14124 20299 22 7000
+# The Temperature data at the end is obvious.  Here is how the pressure data is encoded:
+# >>> digits
+# ['14897', '12336', '14638', '13100', '20299', '14897', '12336', '14638', '14124', '20299']
+# >>> hex_digits = [ '%x' % int(i) for i in digits ]
+# >>> hex_digits
+# ['3a31', '3030', '392e', '332c', '4f4b', '3a31', '3030', '392e', '372c', '4f4b']
+#
+#      1     0 0     9       3                 1     0 0     9       7
+
+record(subArray, "Pressure1:Sub0") {
+    field(INP, "PressTemp:Array.VAL")
+    field(MALM, "12") # has to be 12, NELM of PressTemp:Array
+    field(FTVL, "SHORT")
+    field(NELM,  "12") # ditto 
+    field(INDX, "0")
+    field(FLNK, "Pressure1:Calc0")
+}
+
+record(subArray, "Pressure1:Sub1") {
+    field(INP, "PressTemp:Array.VAL")
+    field(MALM, "12") # has to be 12, NELM of PressTemp:Array
+    field(FTVL, "SHORT")
+    field(NELM,  "12") # ditto 
+    field(INDX, "1")
+    field(FLNK, "Pressure1:Calc0")
+}
+
+record(subArray, "Pressure1:Sub2") {
+    field(INP, "PressTemp:Array.VAL")
+    field(MALM, "12") # has to be 12, NELM of PressTemp:Array
+    field(FTVL, "SHORT")
+    field(NELM,  "12") # ditto 
+    field(INDX, "2")
+    field(FLNK, "Pressure1:Calcout")
+}
+
+record(subArray, "Pressure1:Sub3") {
+    field(INP, "PressTemp:Array.VAL")
+    field(MALM, "12") # has to be 12, NELM of PressTemp:Array
+    field(FTVL, "SHORT")
+    field(NELM,  "12") # ditto 
+    field(INDX, "3")
+    field(FLNK, "Pressure1:Calcout")
+}
+
+record(calc, "Pressure1:Calc0") {
+    field(INPA, "Pressure1:Sub0")
+    field(INPB, "Pressure1:Sub1")
+    field(E, "65280") # xFF00
+    field(F, "255")   # x00FF
+    field(G, "48")    # x30, ascii code for '0'
+    field(CALC, "(A&F-G)*1000+((B&E>>8)-G)*100+(B&F-G)*10") # 40 char, 40 max
+    field(FLNK, "Pressure1:Calcout")
+}
+
+record(calcout, "Pressure1:Calcout") {
+    field(INPC, "Pressure1:Sub2")
+    field(INPD, "Pressure1:Sub3")
+    field(INPH, "Pressure1:Calc0")
+    field(E, "65280") # xFF00
+    field(F, "255")   # x00FF
+    field(G, "48")    # x30, ascii code for '0'
+    field(CALC, "H+((C&E>>8)-G)+((D&E>>8)-G)*0.1") # 31 char, 40 max
+    field(OOPT, "On Change")
+    field(DOPT, "Use CALC")
+    field(OUT, "Pressure1:Actual PP") 
+    # not needed, now use FLNK from Pressure1:Actual in press_temp.subs
+    #field(FLNK, "Pressure:AutoCalc") # race condition?
+}
+
+record(subArray, "Pressure2:Sub5") {
+    field(INP, "PressTemp:Array.VAL")
+    field(MALM, "12") # has to be 12, NELM of PressTemp:Array
+    field(FTVL, "SHORT")
+    field(NELM,  "12") # ditto 
+    field(INDX, "5")
+    field(FLNK, "Pressure2:Calc0")
+}
+
+record(subArray, "Pressure2:Sub6") {
+    field(INP, "PressTemp:Array.VAL")
+    field(MALM, "12") # has to be 12, NELM of PressTemp:Array
+    field(FTVL, "SHORT")
+    field(NELM,  "12") # ditto 
+    field(INDX, "6")
+    field(FLNK, "Pressure2:Calc0")
+}
+
+record(subArray, "Pressure2:Sub7") {
+    field(INP, "PressTemp:Array.VAL")
+    field(MALM, "12") # has to be 12, NELM of PressTemp:Array
+    field(FTVL, "SHORT")
+    field(NELM,  "12") # ditto 
+    field(INDX, "7")
+    field(FLNK, "Pressure2:Calcout")
+}
+
+record(subArray, "Pressure2:Sub8") {
+    field(INP, "PressTemp:Array.VAL")
+    field(MALM, "12") # has to be 12, NELM of PressTemp:Array
+    field(FTVL, "SHORT")
+    field(NELM,  "12") # ditto 
+    field(INDX, "8")
+    field(FLNK, "Pressure2:Calcout")
+}
+
+record(calc, "Pressure2:Calc0") {
+    field(INPA, "Pressure2:Sub5")
+    field(INPB, "Pressure2:Sub6")
+    field(E, "65280") # xFF00
+    field(F, "255")   # x00FF
+    field(G, "48")    # x30, ascii code for '0'
+    field(CALC, "(A&F-G)*1000+((B&E>>8)-G)*100+(B&F-G)*10") # 40 char, 40 max
+    field(FLNK, "Pressure2:Calcout")
+}
+
+record(calcout, "Pressure2:Calcout") {
+    field(INPC, "Pressure2:Sub7")
+    field(INPD, "Pressure2:Sub8")
+    field(INPH, "Pressure2:Calc0")
+    field(E, "65280") # xFF00
+    field(F, "255")   # x00FF
+    field(G, "48")    # x30, ascii code for '0'
+    field(CALC, "H+((C&E>>8)-G)+((D&E>>8)-G)*0.1") # 31 char, 40 max
+    field(OOPT, "On Change")
+    field(DOPT, "Use CALC")
+    field(OUT, "Pressure2:Actual PP")
+    # not needed, now use FLNK from Pressure2:Actual in press_temp.subs
+    #field(FLNK, "Pressure:AutoCalc") # race condition?
+}
+
+# FLNK from Pressure1:Actual, Pressure2:Actual in press_temp.subs
+record(calcout, "Pressure:AutoCalc") {
+    field(INPA, "Pressure1:Actual")
+    field(INPB, "Pressure2:Actual")
+    field(INPC, "Pressure1:Actual.STAT")
+    field(INPD, "Pressure2:Actual.STAT")
+    field(INPE, "-9999.9") # blank, missing value indicator
+    # .STAT and .SEVR are 0 for NO_ALARM, nonzero for any alarm
+    # If both A and B are NO_ALARM, use average
+    # If just one of A or B are NO_ALARM, use that one
+    # If neither are NO_ALARM, use blank, missing value indicator
+    field(CALC, "!C?(!D?A/2+B/2:A):(!D?B:E)") # 26 char, 40 max
+    field(OOPT, "On Change")
+    field(DOPT, "Use CALC")
+    field(OUT, "Pressure:Automatic PP") 
+    field(FLNK, "Pressure:Differ") # uses Pressure1,2:Actual
+}
+
+record(subArray, "Temperature:Sub10") {
+    field(INP, "PressTemp:Array.VAL")
+    field(MALM, "12") # has to be 12, NELM of PressTemp:Array
+    field(FTVL, "SHORT")
+    field(NELM,  "12") # ditto 
+    field(INDX, "10")
+    field(FLNK, "Temperature:Calcout")
+}
+
+record(subArray, "Temperature:Sub11") {
+    field(INP, "PressTemp:Array.VAL")
+    field(MALM, "12")    # has to be 12
+    field(FTVL, "SHORT")
+    field(NELM,  "12")   # ditto
+    field(INDX, "11")
+    field(FLNK, "Temperature:Calcout")
+}
+
+record(calcout, "Temperature:Calcout") {
+    field(INPA, "Temperature:Sub10")
+    field(INPB, "Temperature:Sub11")
+    field(CALC, "A+0.0001*B")
+    field(OOPT, "On Change")
+    field(DOPT, "Use CALC")
+    field(OUT, "Temperature:Automatic PP")
+}
+
+record(bo, "PTFactor:Mode"){
+  field(DESC, "P/T MODE")
+  field(VAL, "0") # MANUAL
+  field(ZNAM, "MANUAL")
+  field(ONAM, "AUTOMATIC")
+  field(PINI, "1")
+}
+
+# P/T STATUS message - same encoding as in Ops manual table 4.16
+# some messages shortened to fit EPICS 27-char length limit
+record(mbbo, "PTFactor:Message"){
+  field(DESC, "P/T STATUS")
+  field(VAL, "11") # initially, expired
+  field(ZRST, "OK")
+  field(ONST, "Pressure 1 unavailable")
+  field(TWST, "Pressure 2 unavailable")
+  field(THST, "Pressure 1 outside range")
+  field(FRST, "Pressure 2 outside range")
+  field(FVST, "Pressures outside range")
+  field(SXST, "Pressure sensors differ")
+  field(SVST, "No pressure information") # was "...information available"
+  field(EIST, "P/T auto, manual differ") # was "P/T Factor differs from manual"
+  field(NIST, "P/T factor outside range")
+  field(TEST, "Temperature outside range")
+  field(ELST, "Correction factor expired") # was "Manual correction factor expired")
+  field(PINI, "1")
+}
+
+# Calculate pressure difference and P/T factor difference here
+# to save space in PTMessage:Calc.CALC string below
+
+
+# Pressure1,2:Actual already FLNK to AutoCalc, so FLNK to here from AutoCalc
+record(calc, "Pressure:Differ") {
+    field(INPA, "Pressure1:Actual")
+    field(INPB, "Pressure2:Actual")
+    field(C, "1.0") # Pressure difference tol in tol.dat 20-Feb-2014
+    field(CALC, "ABS(A-B)<=C")
+    field(FLNK, " PTMessage:Calc")
+}
+
+# FLNK from PTFactor:Automatic and PTFactor:Manual in press_temp.subs
+record(calc, "PTFactor:Differ") {
+    field(INPA, "PTFactor:Automatic")
+    field(INPB, "PTFactor:Manual")
+    field(C, "0.01") # P/T factor tol in tol.dat 20-Feb-2014
+    field(CALC, "ABS(A-B)<=C")
+    field(FLNK, "PTMessage:Calc")
+}
+
+# P/T STATUS message calculation - based on Refman Table 1.7
+# For now we do not detect disconnected pressure sensors
+# So we consider any out-of-range Pressure1 or 2 to mean "unavailable"
+# So for now we never assign codes 3,4,5, only 1,2,7 in their place
+record(calcout, "PTMessage:Calc"){
+    #field(INPA, "Pressure1:Actual") # instead use C, K
+    #field(INPB, "Pressure2:Actual") # insetead use D, K
+    field(INPC, "Pressure1:Actual.STAT")
+    field(INPD, "Pressure2:Actual.STAT")
+    #field(INPE, "PTFactor:Automatic") # instead use J
+    field(INPF, "PTFactor:Automatic.STAT")
+    #field(INPG, "PTFactor:Manual") # instead use J
+    field(INPH, "Temperature:Automatic.STAT")
+    field(INPI, "PTFactor:NotExpired")
+    field(INPJ, "PTFactor:Differ")
+    field(INPK, "Pressure:Differ")
+    # If any .STAT is nonzero, it is an alarm (out of range, etc.)
+    # Order of tests and nesting from precedence in Refman table 1.7    
+    field(CALC, "!I?11:H?10:C?(D?7:1):D?2:F?9:J?8:K?6:0") # 37 char, 40 max
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "PTFactor:Message PP")
+    field(FLNK, "PressTemp:Calc")
+    field(PINI, "1")
+}
+
+# Calculate PressTemp:Status, defined in dosim_interlock.substitutions
+
+record(calcout, "PressTemp:Calc"){
+    field(INPA, "PTFactor:Mode") # 0 Manual, 1 Auto
+    field(INPB, "PTFactor:Manual.STAT") # 0 No alarm
+    # same field labels as in PTMessage:Calc, above
+    field(INPC, "Pressure1:Actual.STAT")   # 0 No alarm
+    field(INPD, "Pressure2:Actual.STAT")   #  etc...
+    field(INPF, "PTFactor:Automatic.STAT")
+    field(INPH, "Temperature:Automatic.STAT")
+    field(INPI, "PTFactor:NotExpired")
+    field(INPJ, "PTFactor:Differ")
+    field(INPK, "Pressure:Differ")    
+    field(CALC, "I&&(!A&&!B||A&&!K&&(!C||!D)&&!J&&!F&&!H)") # 41 char, 40 max oh dear
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "PressTemp:Status PP")
+    field(PINI, "1")
+}
+
+# FLNK from Pressure,Temperature:Automatic in press_temp.subs
+record(calcout, "PTAuto:Calc"){
+    field(INPA, "Pressure:Automatic")
+    field(INPB, "Temperature:Automatic")
+    field(C, "1013.0") # reference pressure, mbar
+    field(D, "273.0") # 0 deg C in deg K
+    field(E, "295.0") # reference temperature, deg K
+    field(CALC, "(C/A)*((B+D)/E)")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "PTFactor:Automatic PP")
+    field(FLNK, "CalVolt1Auto:Calc")
+}
+
+record(calcout, "CalVolt1Auto:Calc") {
+    field(INPA, "CalVolt1:Cal")
+    field(INPB, "PTFactor:Automatic")
+    field(CALC, "A/B") # sic: / division, not * multiplication
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "CalVolt1:Automatic PP")
+    field(FLNK, "CalVolt2Auto:Calc")
+}
+
+record(calcout, "CalVolt2Auto:Calc") {
+    field(INPA, "CalVolt2:Cal")
+    field(INPB, "PTFactor:Automatic")
+    field(CALC, "A/B") # sic: / division, not * multiplication
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "CalVolt2:Automatic PP")
+}
+
+# FLNK from Pressure,Temperature:Manual in press_temp.subs
+record(calcout, "PTManual:Calc"){
+    field(INPA, "Pressure:Manual")
+    field(INPB, "Temperature:Manual")
+    field(C, "1013.0") # reference pressure, mbar
+    field(D, "273.0") # 0 deg C in deg K
+    field(E, "295.0") # reference temperature, deg K
+    field(CALC, "(C/A)*((B+D)/E)")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "PTFactor:Manual PP")
+    field(FLNK, "CalVolt1Manual:Calc")
+}
+
+record(calcout, "CalVolt1Manual:Calc") {
+    field(INPA, "CalVolt1:Cal")
+    field(INPB, "PTFactor:Manual")
+    field(CALC, "A/B") # sic: / division, not * multiplication
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "CalVolt1:Manual PP")
+    field(FLNK, "CalVolt2Manual:Calc")
+}
+
+record(calcout, "CalVolt2Manual:Calc") {
+    field(INPA, "CalVolt2:Cal")
+    field(INPB, "PTFactor:Manual")
+    field(CALC, "A/B") # sic: / division, not * multiplication
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "CalVolt2:Manual PP")
+    field(FLNK, "PTFactorTime:Calc")
+}
+
+# FLNK from CalVolt1:Automatic,Manual in press_temp.subs
+record(calcout, "CalVolt1Preset:Calc") {
+    field(INPA, "PTFactor:Mode") # 0 Manual, 1 Auto
+    field(INPB, "CalVolt1:Automatic")
+    field(INPC, "CalVolt1:Manual")
+    field(CALC, "A?B:C")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "CalVolt1:Preset PP")
+}
+
+# FLNK from CalVolt1:Automatic,Manual in press_temp.subs
+record(calcout, "CalVolt2Preset:Calc") {
+    field(INPA, "PTFactor:Mode") # 0 Manual, 1 Auto
+    field(INPB, "CalVolt2:Automatic")
+    field(INPC, "CalVolt2:Manual")
+    field(CALC, "A?B:C")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "CalVolt2:Preset PP")
+}
+
+# Copied from :Session:TimeStamp when calibration is entered
+record(stringout, "PTFactor:TimeStamp"){
+  field(DESC, "P/T ENTERED")
+  field(VAL, "Not since control program startup") # initial message
+  field(PINI, "1")
+}
+
+# FLNK from Calvolt2Manual:Calc
+record(scalcout, "PTFactorTime:Calc"){
+    field(DESC, "P/T ENTERED")
+    field(INAA, "$(ROOM="Iso"):Session:TimeStamp")
+    field(CALC, "AA")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "PTFactor:TimeStamp PP")
+    field(FLNK, "PTFactor:Refresh")
+}
+
+record(calcout, "PTFactor:Refresh") {
+    field(A, "1")
+    field(CALC, "A")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "PTFactor:NotExpired PP")
+}
+
+record(bo, "PTFactor:NotExpired") {
+    field(ZNAM, "P/T factor expired")
+    field(ONAM, "P/T factor not expired")
+    field(VAL, "0") # initially
+    field(PINI, "1")
+    field(FLNK, "PTMessage:Calc")
+}
+
+record(stringout, "CalConstants:TimeStamp"){
+  field(VAL, "01-Jan-1970 00:00:00")
+  field(DESC, "LAST FILE UPDATE")
+  # date when calibration constants were last edited
+  # Can we program that in EDM, or better in EPICS database itself?
+}
+
+record(stringout, "CalConstants:OperName"){
+  field(VAL, "jon")
+  field(DESC, "LAST FILE UPDATE")
+  # operator when calibration constants were last edited
+  # Can we program that in EDM, or better in EPICS database itself?
+}
+
+record(ao, "Nowhere"){
+    # sink for default FLNK in analog.template
+}

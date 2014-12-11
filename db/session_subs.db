@@ -1,0 +1,159 @@
+# session state variables
+# note default value for ROOM
+# "Iso" isocentric treatment room, "Fix" fixed beam room
+record(longin, "Iso:Session:Patient:Id") {
+  field(VAL, "0")
+  field(FLNK, "Iso:Session:Patient:Fanout")
+  field(LOW, 0)          # missing value in :Id :Plan :Number
+  field(LSV, "INVALID")  # INVALID alarm SEVR when VAL 0
+}
+# session state variables
+# note default value for ROOM
+# "Iso" isocentric treatment room, "Fix" fixed beam room
+record(longin, "Iso:Session:Patient:Number") {
+  field(VAL, "0")
+  field(FLNK, "Iso:Session:Patient:Log")
+  field(LOW, 0)          # missing value in :Id :Plan :Number
+  field(LSV, "INVALID")  # INVALID alarm SEVR when VAL 0
+}
+# session state variables
+# note default value for ROOM
+# "Iso" isocentric treatment room, "Fix" fixed beam room
+record(longin, "Iso:Session:Field:Plan") {
+  field(VAL, "0")
+  field(FLNK, "Iso:Session:NoPlan:Calc")
+  field(LOW, 0)          # missing value in :Id :Plan :Number
+  field(LSV, "INVALID")  # INVALID alarm SEVR when VAL 0
+}
+# session state variables
+# note default value for ROOM
+# "Iso" isocentric treatment room, "Fix" fixed beam room
+record(longin, "Iso:Session:Field:Number") {
+  field(VAL, "0")
+  field(FLNK, "Iso:Session:Field:Fanout")
+  field(LOW, 0)          # missing value in :Id :Plan :Number
+  field(LSV, "INVALID")  # INVALID alarm SEVR when VAL 0
+}
+# session state variables
+# note default value for ROOM
+# "Iso" isocentric treatment room, "Fix" fixed beam room
+record(stringin, "Iso:Session:Patient:Name") {
+  field(VAL, "No patient")
+  field(FLNK, "")
+}
+# session state variables
+# note default value for ROOM
+# "Iso" isocentric treatment room, "Fix" fixed beam room
+record(stringin, "Iso:Session:Field:Name") {
+  field(VAL, "No field")
+  field(FLNK, "Iso:Session:Field:Log")
+}
+# session state variables
+# note default value for ROOM
+# "Iso" isocentric treatment room, "Fix" fixed beam room
+record(stringin, "Iso:Session:Operator:Name") {
+  field(VAL, "No operator")
+  field(FLNK, "Iso:Session:Operator:Log")
+}
+
+record(bi, "Iso:Session:Mode") {
+  field(DESC, "MODE")
+  field(VAL, "0")  # initially Therapy mode
+  field(ZNAM, "Therapy")
+  field(ONAM, "Experiment")
+  field(FLNK, "Iso:Session:NewMode:Calc")
+}
+
+record(bi, "Iso:Session:Operator:Role") {
+  field(DESC, "ROLE")
+  field(VAL, "0")  # initially Therapy mode
+  field(ZNAM, "Therapist")
+  field(ONAM, "Physicist")
+  field(FLNK, "Iso:Session:NewRole:Calc")
+}
+
+record(bi, "Iso:Session:ModeRequest") {
+  field(DESC, "MODE REQUEST")
+  field(VAL, "0")  # initially Therapy mode
+  field(ZNAM, "Therapy")
+  field(ONAM, "Experiment")
+  field(FLNK, "Iso:Session:ModeRequest:Calc")
+}
+record(calcout, "Iso:Session:NewPatient:Calc") {
+  field(INPA, "Iso:Session:Patient:Id MS") # Maximize Severity to propagate alarm
+  field(CALC, "A")
+  field(OOPT, "On Change")
+  field(DOPT, "Use OCAL")
+  field(OCAL, "0")
+  field(OUT, "Iso:Session:NewPatient:Seq PP MS") # MS to propagate alarm
+}
+record(calcout, "Iso:Session:NoPatientNumber:Calc") {
+  field(INPA, "Iso:Session:Patient:Id MS") # Maximize Severity to propagate alarm
+  field(CALC, "A")
+  field(OOPT, "Transition To Zero")
+  field(DOPT, "Use OCAL")
+  field(OCAL, "0")
+  field(OUT, "Iso:Session:Patient:Number PP MS") # MS to propagate alarm
+}
+record(calcout, "Iso:Session:NoPlan:Calc") {
+  field(INPA, "Iso:Session:Field:Plan MS") # Maximize Severity to propagate alarm
+  field(CALC, "A")
+  field(OOPT, "Transition To Zero")
+  field(DOPT, "Use OCAL")
+  field(OCAL, "0")
+  field(OUT, "Iso:Session:Field:Number PP MS") # MS to propagate alarm
+}
+record(calcout, "Iso:Session:NoField:Calc") {
+  field(INPA, "Iso:Session:Field:Number MS") # Maximize Severity to propagate alarm
+  field(CALC, "A")
+  field(OOPT, "Transition To Zero")
+  field(DOPT, "Use OCAL")
+  field(OCAL, "0")
+  field(OUT, "Iso:Session:Subsystems0:NoField.PROC PP MS") # MS to propagate alarm
+}
+record(calcout, "Iso:Session:NewMode:Calc") {
+  field(INPA, "Iso:Session:Mode MS") # Maximize Severity to propagate alarm
+  field(CALC, "A")
+  field(OOPT, "On Change")
+  field(DOPT, "Use OCAL")
+  field(OCAL, "0")
+  field(OUT, "Iso:Session:NewMode:Seq PP MS") # MS to propagate alarm
+}
+# when patient number set to zero, set name to "No patient"
+# string output, use scalcout here, with OSV instead of OCAL
+record(scalcout, "Iso:Session:NoPatientName:Calc") {
+  field(INPA, "Iso:Session:Patient:Id MS") # Maximize severity - propagate alarm
+  field(CALC, "A") # will change if Patient changes
+  field(OOPT, "Transition To Zero") # Plan
+  field(DOPT, "Use OCAL") # actually, use OSV
+  field(OSV, "No patient") # No patient
+  field(OUT, "Iso:Session:Patient:Name PP MS") # MS propagate alarm
+}
+# when patient number set to zero, set name to "No patient"
+# string output, use scalcout here, with OSV instead of OCAL
+record(scalcout, "Iso:Session:NoFieldName:Calc") {
+  field(INPA, "Iso:Session:Field:Number MS") # Maximize severity - propagate alarm
+  field(CALC, "A") # will change if Patient changes
+  field(OOPT, "When Zero") # Plan
+  field(DOPT, "Use OCAL") # actually, use OSV
+  field(OSV, "No field") # No patient
+  field(OUT, "Iso:Session:Field:Name PP MS") # MS propagate alarm
+}
+record(calcout, "Iso:Session:ModeRequest:Calc") {
+  field(INPA, "Iso:Session:ModeRequest MS") # Maximize severity to propagate alarm
+  field(INPB, "Iso:Session:Operator:Role MS")
+  field(CALC, "!A||B")
+  field(OOPT, "When Non-zero")
+  field(DOPT, "Use OCAL")
+  field(OCAL, "A")
+  field(OUT, "Iso:Session:Mode PP") # MS propagate alarm
+}
+record(calcout, "Iso:Session:NewRole:Calc") {
+  field(INPA, "Iso:Session:Operator:Role MS") # Maximize severity to propagate alarm
+  field(INPB, "Iso:Session:Mode MS")
+  field(CALC, "!A&&B")
+  field(OOPT, "Transition To Non-zero")
+  field(DOPT, "Use OCAL")
+  field(OCAL, "0")
+  field(OUT, "Iso:Session:Mode PP") # MS propagate alarm
+}

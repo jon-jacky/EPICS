@@ -1,0 +1,104 @@
+# started from motion_input_subs.db
+# remove all non-FilterWedge records: GantryCouch etc.
+# remove all "Iso:FilterWedge:"
+# change all field(VAL, 0) to field(VAL, "0")
+# change all alias(...) to #  alias(...) - comment them all out
+
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeRot:DriveEnabled") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 2 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"DISABLED")
+    field(ONAM,"ENABLED")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso WdgRot Disabled to VME")
+    field(FLNK,"MotionSafety:Status")  # is PP needed for FLNK?
+#   alias(MOD2:Coil0903:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeType:DriveEnabled") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 3 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"DISABLED")
+    field(ONAM,"ENABLED")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso WdgSel Disabled to VME")
+    field(FLNK,"MotionSafety:Status")  # is PP needed for FLNK?
+#   alias(MOD2:Coil0904:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"FlatFilter:DriveEnabled") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 4 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"DISABLED")
+    field(ONAM,"ENABLED")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Filter Disabled to VME")
+    field(FLNK,"MotionSafety:Status")  # is PP needed for FLNK?
+#   alias(MOD2:Coil0905:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeRot:ErrorOK") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 17 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"not OK")
+    field(ONAM,"OK")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso WRot Error Ok to VME")
+    field(FLNK,"MotionSafety:Status")  # is PP needed for FLNK?
+#   alias(MOD2:Coil0918:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"WedgeType:ErrorOK") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 18 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"not OK")
+    field(ONAM,"OK")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso WSel Error Ok to VME")
+    field(FLNK,"MotionSafety:Status")  # is PP needed for FLNK?
+#   alias(MOD2:Coil0919:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}
+# bi record template for register inputs
+# TEST VERSION - no asyn device support
+record(bi,"FlatFilter:ErrorOK") {
+#    field(DTYP,"asynUInt32Digital")
+#    field(INP,"@asynMask(In_Coil00 19 0x1)")
+#    field(SCAN,"I/O Intr")
+    field(ZNAM,"not OK")
+    field(ONAM,"OK")
+#    field(ZSV,"NO_ALARM")
+#    field(OSV,"NO_ALARM")
+    field(DESC,"Iso Filter Error Ok to VME")
+    field(FLNK,"MotionSafety:Status")  # is PP needed for FLNK?
+#   alias(MOD2:Coil0920:Read)
+    field(VAL, "0") # force assign at init to clear UDF and INVALID
+    field(PINI, "1") # force processing at init to clear UDF and INVALID 
+}

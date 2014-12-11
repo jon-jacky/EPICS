@@ -1,0 +1,142 @@
+
+# Start auto setup when button pressed in EDM and conditions in CALC
+record(calcout, "WedgeType:AutoSetup") {
+  field(INPA, "WedgeType:Readiness") 
+  field(INPB, "WedgeTypeNone:RequestEnabled") 
+  field(INPC, "WedgeType30:RequestEnabled") 
+  field(INPD, "WedgeType45:RequestEnabled") 
+  field(INPE, "WedgeType60:RequestEnabled") 
+  field(CALC, "A==0&&!B&&!C&&!D&&!E") # NOT READY and none of the requests pending
+  field(OOPT, "When Non-zero") # and only processed when button pressed
+  field(DOPT, "Use CALC")
+  field(OUT, "WedgeType:Start.PROC PP")
+}
+
+# Fan out from auto setup button to all the :Calc and also :Timeout
+# Has to be seq because we send ODLY value to :Timeout, the others just send to .PROC
+record(seq, "WedgeType:Start") {
+  field(SELM, "All")
+  field(DOL1, "0") # value doesn't matter, just send to .PROC
+  field(LNK1, "WedgeTypeNone:Calc.PROC PP") 
+  field(DOL2, "0")
+  field(LNK2, "WedgeType30:Calc.PROC PP") 
+  field(DOL3, "0")
+  field(LNK3, "WedgeType45:Calc.PROC PP") 
+  field(DOL4, "0")
+  field(LNK4, "WedgeType60:Calc.PROC PP") 
+  # Must send timeout interval in integer seconds to :Timeout.B, see Timeout record below
+  field(DOL5, "20")
+  field(LNK5, "WedgeType:Timeout.B")
+  # up to 6 LNK
+}
+
+# When auto setup starts
+# :Calc decode :Prescribed for all :RequestEnabled
+
+record(calcout, "WedgeTypeNone:Calc") {
+  field(INPA, "WedgeType:Prescribed") 
+  field(CALC, "A==0")
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "WedgeTypeNone:RequestEnabled PP")
+}
+
+record(calcout, "WedgeType30:Calc") {
+  field(INPA, "WedgeType:Prescribed") 
+  field(CALC, "A==1")
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "WedgeType30:RequestEnabled PP")
+}
+
+record(calcout, "WedgeType45:Calc") {
+  field(INPA, "WedgeType:Prescribed") 
+  field(CALC, "A==2")
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "WedgeType45:RequestEnabled PP")
+}
+
+record(calcout, "WedgeType60:Calc") {
+  field(INPA, "WedgeType:Prescribed") 
+  field(CALC, "A==3")
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "WedgeType60:RequestEnabled PP")
+}
+
+# stop auto setup when setting becomes ready
+#  works by forcing :Timeout to expire immediately by assigning 0 to its VAL
+record(calcout, "WedgeType:Stop") {
+  field(SCAN, "1 second") # periodic
+  field(INPA, "WedgeType:Readiness") 
+  field(CALC, "A!=2") # READY - negative logic because we need OUT to send 0
+  field(OOPT, "Transition To Zero")
+  field(DOPT, "Use CALC")
+  # send 0 to Timeout.C to 
+  field(OUT, "WedgeType:Timeout.VAL PP")
+}
+
+# stop auto setup when timeout expires
+# based on Tim Mooney, http://www.aps.anl.gov/epics/tech-talk/2012/msg01327.php
+# a - Timer register, counts down from timeout interval to 0
+#       assign timeout interval > 0 to Timeout.A to start or reset timer
+#       assign 0 to Timeout.VAL (or just Timeout) to force immediate timeout and send OUT 
+#     BUT can't write directly to Timeout.A because it will be overwritten by VAL via INPA
+#       instead write to Timeout.B, see below
+# c - Countdown enable, must be nonzero to enable a to count down
+#      Write 0 to Timeout.C to freeze countdown or cancel timeout, nonzero to resume
+# b - Write timeout interval > 0 to Timeout.B to assign it to both a and c
+#      Initializes both a and c, needed after c has been set to 0 to cancel timeout
+#      Needed to set a because otherwise a will be overwritten by VAL via INPA
+record(calcout, "WedgeType:Timeout") {
+    field(SCAN, "1 second") # so a is timer interval in seconds
+    field(INPA, "WedgeType:Timeout.VAL")
+    field(CALC, "b?b:(a&&c?a-1:a);c:=(b?b:c);b:=0") # 33 chars, max 36
+    field(OOPT, "Transition To Zero")
+    field(DOPT, "Use CALC")
+    field(OUT, "WedgeType:Disable.PROC PP")
+}
+
+# when auto setup stops, send zero to every :RequestEnabled 
+record(seq, "WedgeType:Disable") {
+  field(SELM, "All")
+  field(DOL1, "0")
+  field(LNK1, "WedgeTypeNone:RequestEnabled PP") 
+  field(DOL2, "0")
+  field(LNK2, "WedgeType30:RequestEnabled PP") 
+  field(DOL3, "0")
+  field(LNK3, "WedgeType45:RequestEnabled PP") 
+  field(DOL4, "0")
+  field(LNK4, "WedgeType60:RequestEnabled PP") 
+  # up to 10 DOL/LNK pairs
+}
+# one-of-a-kind records created by hand for the Filter/Wedge subsystem
+
+# Fan out from EDM auto setup button to all subsystem setting auto setups
+record(fanout, "Subsystem:AutoSetup") {
+  field(SELM, "All")
+  field(LNK1, "WedgeRot:AutoSetup")
+  field(LNK2, "WedgeType:AutoSetup")
+  field(LNK3, "FlatFilter:AutoSetup")
+  # up to 6 LNK
+}
+
+# Auto Setup interlock
+record(calcout, "FWSetup:Calc") {
+  field(INPA, "WedgeTypeNone:RequestEnabled") 
+  field(INPB, "WedgeType30:RequestEnabled") 
+  field(INPC, "WedgeType45:RequestEnabled") 
+  field(INPD, "WedgeType60:RequestEnabled") 
+  field(INPE, "WedgeRot0:RequestEnabled") 
+  field(INPF, "WedgeRot90:RequestEnabled") 
+  field(INPG, "WedgeRot180:RequestEnabled") 
+  field(INPH, "WedgeRot270:RequestEnabled") 
+  field(INPI, "FlatFilterNone:RequestEnabled") 
+  field(INPJ, "FlatFilterSmall:RequestEnabled") 
+  field(INPK, "FlatFilterLarge:RequestEnabled") 
+  field(CALC, "!(A||B||C||D||E||F||G||H||I||J||K)") # any RequestEnabled is on, then invert
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "FWSetup:Status PP")
+}

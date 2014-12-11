@@ -1,0 +1,288 @@
+# ao is usually ai for inputs, ao for outputs
+# Pressure1:Actual must include full suffix as in "DoseA:Actual"
+
+record(ao, "Pressure1:Actual") {
+  field(DESC, "PRESSURE 1")
+  field(LOPR, "970.0")
+  field(HOPR, "1040.0")
+  field(LOW, "970.0")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "1040.0")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "mbar")
+  field(PREC, "1")
+  field(LINR, "SLOPE")
+  field(ESLO, "1.0")
+  field(EOFF, "0.0")
+  field(FLNK, "Pressure:AutoCalc") 
+}
+# ao is usually ai for inputs, ao for outputs
+# Pressure2:Actual must include full suffix as in "DoseA:Actual"
+
+record(ao, "Pressure2:Actual") {
+  field(DESC, "PRESSURE 2")
+  field(LOPR, "970.0")
+  field(HOPR, "1040.0")
+  field(LOW, "970.0")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "1040.0")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "mbar")
+  field(PREC, "1")
+  field(LINR, "SLOPE")
+  field(ESLO, "1.0")
+  field(EOFF, "0.0")
+  field(FLNK, "Pressure:AutoCalc") 
+}
+# ao is usually ai for inputs, ao for outputs
+# Pressure:Automatic must include full suffix as in "DoseA:Actual"
+
+record(ao, "Pressure:Automatic") {
+  field(DESC, "PRESSURE")
+  field(LOPR, "970.0")
+  field(HOPR, "1040.0")
+  field(LOW, "970.0")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "1040.0")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "mbar")
+  field(PREC, "1")
+  field(LINR, "SLOPE")
+  field(ESLO, "1.0")
+  field(EOFF, "0.0")
+  field(FLNK, "PTAuto:Calc") 
+}
+# ao is usually ai for inputs, ao for outputs
+# Pressure:Manual must include full suffix as in "DoseA:Actual"
+
+record(ao, "Pressure:Manual") {
+  field(DESC, "PRESSURE")
+  field(LOPR, "970.0")
+  field(HOPR, "1040.0")
+  field(LOW, "970.0")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "1040.0")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "mbar")
+  field(PREC, "1")
+  field(LINR, "SLOPE")
+  field(ESLO, "1.0")
+  field(EOFF, "0.0")
+  field(FLNK, "PTManual:Calc") 
+}
+# ao is usually ai for inputs, ao for outputs
+# Temperature:Automatic must include full suffix as in "DoseA:Actual"
+
+record(ao, "Temperature:Automatic") {
+  field(DESC, "TEMPERATURE")
+  field(LOPR, "19.0")
+  field(HOPR, "28.0")
+  field(LOW, "19.0")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "28.0")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "C")
+  field(PREC, "1")
+  field(LINR, "SLOPE")
+  field(ESLO, "1.0")
+  field(EOFF, "0.0")
+  field(FLNK, "PTAuto:Calc") 
+}
+# ao is usually ai for inputs, ao for outputs
+# Temperature:Manual must include full suffix as in "DoseA:Actual"
+
+record(ao, "Temperature:Manual") {
+  field(DESC, "TEMPERATURE")
+  field(LOPR, "19.0")
+  field(HOPR, "28.0")
+  field(LOW, "19.0")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "28.0")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "C")
+  field(PREC, "1")
+  field(LINR, "SLOPE")
+  field(ESLO, "1.0")
+  field(EOFF, "0.0")
+  field(FLNK, "PTManual:Calc") 
+}
+# ao is usually ai for inputs, ao for outputs
+# PTFactor:Automatic must include full suffix as in "DoseA:Actual"
+
+record(ao, "PTFactor:Automatic") {
+  field(DESC, "P/T FACTOR")
+  field(LOPR, "0.932")
+  field(HOPR, "1.040")
+  field(LOW, "0.932")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "1.040")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "")
+  field(PREC, "4")
+  field(LINR, "SLOPE")
+  field(ESLO, "1.0")
+  field(EOFF, "0.0")
+  field(FLNK, "PTFactor:Differ") 
+}
+# ao is usually ai for inputs, ao for outputs
+# PTFactor:Manual must include full suffix as in "DoseA:Actual"
+
+record(ao, "PTFactor:Manual") {
+  field(DESC, "P/T FACTOR")
+  field(LOPR, "0.932")
+  field(HOPR, "1.040")
+  field(LOW, "0.932")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "1.040")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "")
+  field(PREC, "4")
+  field(LINR, "SLOPE")
+  field(ESLO, "1.0")
+  field(EOFF, "0.0")
+  field(FLNK, "PTFactor:Differ") 
+}
+# ao is usually ai for inputs, ao for outputs
+# CalVolt1:Automatic must include full suffix as in "DoseA:Actual"
+
+record(ao, "CalVolt1:Automatic") {
+  field(DESC, "CAL GAIN 1")
+  field(LOPR, "600")
+  field(HOPR, "800")
+  field(LOW, "600")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "800")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "")
+  field(PREC, "0")
+  field(LINR, "SLOPE")
+  field(ESLO, "1.0")
+  field(EOFF, "0.0")
+  field(FLNK, "CalVolt1Preset:Calc") 
+}
+# ao is usually ai for inputs, ao for outputs
+# CalVolt1:Manual must include full suffix as in "DoseA:Actual"
+
+record(ao, "CalVolt1:Manual") {
+  field(DESC, "CAL GAIN 1")
+  field(LOPR, "600")
+  field(HOPR, "800")
+  field(LOW, "600")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "800")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "")
+  field(PREC, "0")
+  field(LINR, "SLOPE")
+  field(ESLO, "1.0")
+  field(EOFF, "0.0")
+  field(FLNK, "CalVolt1Preset:Calc") 
+}
+# ao is usually ai for inputs, ao for outputs
+# CalVolt1:Preset must include full suffix as in "DoseA:Actual"
+
+record(ao, "CalVolt1:Preset") {
+  field(DESC, "CAL GAIN 1")
+  field(LOPR, "600")
+  field(HOPR, "800")
+  field(LOW, "600")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "800")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "")
+  field(PREC, "0")
+  field(LINR, "SLOPE")
+  field(ESLO, "1.0")
+  field(EOFF, "0.0")
+  field(FLNK, "Nowhere") 
+}
+# ao is usually ai for inputs, ao for outputs
+# CalVolt2:Automatic must include full suffix as in "DoseA:Actual"
+
+record(ao, "CalVolt2:Automatic") {
+  field(DESC, "CAL GAIN 2")
+  field(LOPR, "600")
+  field(HOPR, "800")
+  field(LOW, "600")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "800")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "")
+  field(PREC, "0")
+  field(LINR, "SLOPE")
+  field(ESLO, "1.0")
+  field(EOFF, "0.0")
+  field(FLNK, "CalVolt2Preset:Calc") 
+}
+# ao is usually ai for inputs, ao for outputs
+# CalVolt2:Manual must include full suffix as in "DoseA:Actual"
+
+record(ao, "CalVolt2:Manual") {
+  field(DESC, "CAL GAIN 2")
+  field(LOPR, "600")
+  field(HOPR, "800")
+  field(LOW, "600")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "800")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "")
+  field(PREC, "0")
+  field(LINR, "SLOPE")
+  field(ESLO, "1.0")
+  field(EOFF, "0.0")
+  field(FLNK, "CalVolt2Preset:Calc") 
+}
+# ao is usually ai for inputs, ao for outputs
+# CalVolt2:Preset must include full suffix as in "DoseA:Actual"
+
+record(ao, "CalVolt2:Preset") {
+  field(DESC, "CAL GAIN 2")
+  field(LOPR, "600")
+  field(HOPR, "800")
+  field(LOW, "600")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "800")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "")
+  field(PREC, "0")
+  field(LINR, "SLOPE")
+  field(ESLO, "1.0")
+  field(EOFF, "0.0")
+  field(FLNK, "Nowhere") 
+}
+# ao is usually ai for inputs, ao for outputs
+# DoseRate:Manual must include full suffix as in "DoseA:Actual"
+
+record(ao, "DoseRate:Manual") {
+  field(DESC, "DEFAULT DOSE RATE")
+  field(LOPR, "0.0")
+  field(HOPR, "99.9")
+  field(LOW, "0.0")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "99.9")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "MU/min")
+  field(PREC, "1")
+  field(LINR, "SLOPE")
+  field(ESLO, "0.1")
+  field(EOFF, "0.0")
+  field(FLNK, "Nowhere") 
+}
+# ao is usually ai for inputs, ao for outputs
+# TimeFactor:Manual must include full suffix as in "DoseA:Actual"
+
+record(ao, "TimeFactor:Manual") {
+  field(DESC, "TIME FACTOR")
+  field(LOPR, "1.00")
+  field(HOPR, "2.00")
+  field(LOW, "1.00")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "2.00")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "")
+  field(PREC, "2")
+  field(LINR, "SLOPE")
+  field(ESLO, "0.1")
+  field(EOFF, "0.0")
+  field(FLNK, "Nowhere") 
+}

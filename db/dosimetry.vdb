@@ -1,0 +1,56 @@
+# remove all $(ROOM="Iso"):$(SUBSYSTEM):
+# replace $(SETTING) with Subsystem
+
+record(bo, "Subsystem:Override"){
+  field(ZNAM, "Not overridden")
+  field(ONAM, "Overridden")
+  field(FLNK, "Settings:Readiness")
+}
+record(calc, "Settings:Readiness") {
+  # settings and merged calc follows here, different settings for every subsystem
+  field(INPA, "Fractions:Readiness")
+  field(INPB, "DailyDose:Readiness")
+  field(INPC, "TotalDose:Readiness")
+  field(INPD, "Subsystem:Override")
+  field(CALC, "D?1:MIN(A,B,C)") # A,B,C might each be 0,1,2, D might be 0,1
+  field(FLNK, "CheckConfirm:Status")
+}
+
+record(calc, "CheckConfirm:Status"){
+  field(INPA, "Settings:Readiness")
+  # check-and-confirm calc follows here, possibly including :MotionSafety
+  # INPA :Settings:Readiness might be 0,1,2 but treat as boolean here
+  field(CALC, "A?1:0") # nonzero, where A might be 0,1,2
+  field(FLNK, "Subsystem:Calc")
+}
+
+record(calc, "Subsystem:Calc"){
+  # subsystem readiness calc follows here, different for every subsystem
+  field(INPA, "Settings:Readiness")
+  field(INPB, "CheckConfirm:Status")
+  field(INPC, "CYC:DosimRelayA1OK:Status")
+  field(INPD, "CYC:DosimRelayA2OK:Status")
+  field(INPE, "PressTemp:Status")
+  field(INPF, "DMCCal:Status")
+  field(INPG, "SetupTimeout:Status")
+  field(INPH, "StartTimeout:Status")
+  field(INPI, "DMCError:Status")
+  field(INPJ, "DMCSetup:Status")
+  field(INPK, "PLCError:Status")
+  field(INPL, "RelayError:Status")
+  
+  field(CALC, "(B&&C&&D&&E&&F&&G&&H&&I&&J&&K&&L)?A:0")
+  field(SCAN, ".1 second") # CYC...:Status records have no FLNK
+  field(FLNK, "Subsystem:Readiness")
+}
+
+record(mbbo, "Subsystem:Readiness") {
+  field(DESC, "$(DESC)")
+  field(VAL, "$(VAL=0)")  # initially NOT READY
+  field(ZRST, "NOT READY")
+  field(ONST, "OVERRIDE")
+  field(TWST, "READY")
+  field(DOL, "Subsystem:Calc") 
+  field(OMSL, "closed_loop") # needed for DOL
+}
+

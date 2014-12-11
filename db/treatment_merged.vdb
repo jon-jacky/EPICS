@@ -1,0 +1,790 @@
+# Treatment sequence - 18 Nov 2013 move in records from treatment_record.db and dosimetry.db
+
+# ZRST etc same as phase_text in cnts/code/plcdisp.h, comments show enum from dmc.h Z_Phase
+# See also CNTS Ref Man Table 1.14 Treatment phases, but some phases renamed: 
+# Tested OK > tested, Waiting > loaded, Ready > started, Dose delivered > ended.
+record(mbbo, "Phase"){
+  field(DESC, "DMC Phase")
+  field(ZRST, "Reset")      # 0, ctlr_reset
+  field(ONST, "Self-Test")  # 1, selftest
+  field(TWST, "Tested OK")  # 2, tested
+  field(THST, "Waiting")    # 3, loaded
+  field(FRST, "Ready")      # 4, started
+  field(FVST, "Counting")   # 5, counting
+  field(SXST, "Dose delivered") # 6, ended
+  field(SVST, "Paused")     # 7, paused
+  field(EIST, "Resumed")    # 8, resumed
+  field(NIST, "Stopped")    # 9, stopped
+  field(TEST, "Time exceeded") # 10, exceeded"
+  field(ELST, "Term. Wait") # 11, termwait
+  field(TVST, "Term. Test")  # 12, termtest"
+  field(TTST, "Terminated") # 13, terminated
+  field(FTST, "Exited")     # 14, exited
+  # FFST is still available
+  field(FLNK, "Phase:Fanout")
+  field(VAL, "13") # initially terminated
+  field(PINI, "1") # force processing at init to clear UDF INVALID
+}
+
+record(fanout, "Phase:Fanout") {
+  field(LNK1, "Calc")
+  field(LNK2, "Phase:Log")
+  field(LNK3, "Dosimetry:Subsystem:Calc")
+  field(SELM, "All")
+  # up to 6 LNK
+}
+
+# Calc :Run from :Phase per CNTS Ref Man Table 1.14, treatment phases
+record(calcout, "Calc") {
+  field(INPA, "Phase")
+  field(OOPT, "Every Time") # On Change should be enough 
+  field(DOPT, "Use CALC")
+  # table 2.1 in refman, Run is 4/Ready through 11/Term Wait
+  field(CALC, "(3<A)&&(A<12)") 
+  field(OUT, "Run PP")
+  field(FLNK, "DMC:PollDisable")
+}
+
+# like run in cnts/code/zintlk.h, dmc.c etc.
+record(bo, "Run"){
+  field(DESC, "Run Status")
+  field(ZNAM, "Setup")    # setup
+  field(ONAM, "Running")  # running
+  field(VAL, "0")   # initially setup
+  field(PINI, "1") # force processing at init to clear UDF INVALID
+}
+
+# Set Phase to 3 etc. Triggered from dmc.proto autosetup protocol: 
+#  exec "dbpf Iso:Treatment:Waiting:Seq.PROC 1"; 
+record(seq, "Waiting:Seq"){
+    field(SELM, "All")
+    field(DOL1, "3") # Phase 3/Waiting
+    field(LNK1, "Phase PP")
+    field(DOL2, "1")
+    field(LNK2, "Dosimetry:DMCSetup:Status") # clear interlock
+    field(DOL3, "900") # for testing use 30 - in production use 900 sec, 15 minutes
+    field(LNK3, "Dosimetry:SetupTimeout:Timeout.B") # start SetupTimeout
+}
+
+# Conditions to send CON START to DMC
+# Treatment:Phase must be 3, "Waiting"
+# All interlocks must be clear, except dosimetry relays
+
+record(calcout, "StartIntlk:Calc"){ 
+    # All sw and hw interlocks *except* dosimetry
+    # INPA :Phase *not* used here:field(INPA, "Phase")
+    # software interlocks, Calc0 and Calc1 are big "and" && of all sw_intlk
+    field(INPB, "TherapySumIntlk:Calc0")
+    field(INPC, "TherapySumIntlk:Calc1")
+    # hardware interlocks from MOD1
+    # omit therapy sum and therapy watchdog
+    field(INPD, "TherapyDoorAClosed:Status")
+    field(INPE, "ConsoleAKeyOn:Status")
+    field(INPF, "NoProtonBeamIntlkLineA:Status")
+    field(INPG, "BeamOffAPBNotPushed:Status")
+    field(INPH, "SafetyLineAConsistent:Status")
+    # hardware interlocks from MOD2
+    field(INPI, "Pedestal:KeyOff:Status")
+    field(CALC, "B&&C&&D&&E&&F&&G&&H&&I") # string 36, 7*3=21 + 1 = 22 char
+    field(OOPT, "When Non-zero")
+    field(DOPT, "Use CALC")
+    field(OUT, "Start:Calc.PROC PP")
+    field(FLNK, "Paused:Calc")
+}
+
+record(calcout, "Start:Calc"){
+    field(INPA, "Phase")
+    # All sw and hw interlocks *except* dosimetry
+    field(INPB, "StartIntlk:Calc")
+    field(CALC, "(A==3)&&B") # Phase 3/Waiting
+    field(OOPT, "Transition To Non-zero")
+    field(DOPT, "Use CALC")
+    field(OUT, "DMC:Start.PROC PP") # send CON START to DMC
+}
+
+# Enter Ready phase when all interlocks *including dosimetry* are clear, 
+# All the same interlocks as Treatment:Start:Calc above but dosimetry relays also
+
+record(calcout, "ReadyIntlk:Calc"){
+    # All sw and hw interlocks *including* dosimetry
+    # INPA :Phase *not* used here: field(INPA, "Phase")
+    # INPB - INPI are same as in StartIntlk
+    # software interlocks, Calc0 and Calc1 are big "and" && of all sw_intlk
+    field(INPB, "TherapySumIntlk:Calc0")
+    field(INPC, "TherapySumIntlk:Calc1")
+    # hardware interlocks from MOD1
+    # omit therapy sum and therapy watchdog
+    field(INPD, "TherapyDoorAClosed:Status")
+    field(INPE, "ConsoleAKeyOn:Status")
+    field(INPF, "NoProtonBeamIntlkLineA:Status")
+    field(INPG, "BeamOffAPBNotPushed:Status")
+    field(INPH, "SafetyLineAConsistent:Status")
+    # hardware interlocks from MOD2
+    field(INPI, "Pedestal:KeyOff:Status")
+    # additional dosimetry interlocks from MOD1: not included in StartIntlk
+    field(INPJ, "DosimRelayA1OK:Status")
+    field(INPK, "DosimRelayA2OK:Status") 
+    field(CALC, "B&&C&&D&&E&&F&&G&&H&&I&&J&&K") # string 36, 9*3 = 27 + 1 = 28
+    field(OOPT, "When Non-zero")
+    field(DOPT, "Use CALC")
+    field(OUT, "Ready:Calc.PROC PP")
+}
+
+record(calcout, "Ready:Calc"){
+    field(INPA, "Phase")
+    # All sw and hw interlocks *including* dosimetry
+    field(INPB, "ReadyIntlk:Calc")
+    field(CALC, "(A==3)&&B") # Phase 3/Waiting
+    # field(OOPT, "Transition To Non-zero")
+    field(OOPT, "When Non-zero") # make sure this appears, should be idempotent
+    field(DOPT, "Use CALC")
+    # Enter Phase 4/Ready from 3/Waiting
+    field(OUT, "Ready:Seq.PROC PP")
+}
+
+# Enter Ready phase, pop up TREATMENT READY message
+# New Phase will start polling
+record(seq, "Ready:Seq"){
+    field(SELM, "All")
+    field(DOL1, "4") # Phase 4/Ready
+    field(LNK1, "Phase PP")
+    field(DOL2, "1")
+    field(LNK2, "Ready:MsgFileName.PROC")
+    field(DOL3, "1")
+    field(LNK3, "Ready:Log.PROC")
+    field(DOL4, "0") 
+    field(LNK4, "Dosimetry:SetupTimeout:Timeout.C") # cancel SetupTimeout
+    field(DOL3, "30") # seconds
+    field(LNK3, "Dosimetry:StartTimeout:Timeout.B") # start StartTimeout
+}
+
+# Just a way to send msg_ready.edl to :Panel:Request
+#  because DOL in seq can't have a string value
+record(scalcout, "Ready:MsgFileName"){
+    field(AA, "msg_ready.edl")
+    field(CALC, "AA")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "UI:Panel:Request PP")
+}
+
+# Invoked from [EXIT RUN] on msg_ready,_interrupted.edl
+# ...:Exited:Seq.PROC is named in all those .edl
+record(seq, "Exited:Seq") {
+  field(SELM, "All")
+  field(DOL1, "1")
+  field(LNK1, "UI:Panel:Restore.PROC PP") # replace EXIT RUN panel
+  field(DOL2, "14") # Exited
+  field(LNK2, "Phase PP")
+  field(DOL3, "1") # Exited
+  field(LNK3, "Dosimetry:RunDose:Calc.PROC PP")
+  field(DOL4, "1")
+  field(LNK4, "$(ROOM):DMC:Stop.PROC PP") # open dosimetry relays
+  # up to ...LNK9, LNKA
+}
+
+# Enter Counting phase, clear TREATMENT READY message
+# Invoked by M1: DMC Timer Enabled, DMCTimerAEnabled:Status
+
+record(calcout, "Counting:Calc"){
+    field(INPA, "Phase")
+    field(INPB, "StartIntlk:Calc.VAL")
+    field(INPC, "StartAPBOneShot")
+    field(INPD, "DMCTimerAEnabled:Status")
+    field(INPE, "BeamPlgAClosed:Status")
+    # Usually START button C triggers OUT, DMC Timer D and Plug E are backup
+    field(CALC, "(A==4)&&B&&(C||D||!E)") # Phase 4/Ready
+    field(OOPT, "Transition To Non-zero") # 'To' not 'to', unlike scalcout doc
+    field(DOPT, "Use CALC")
+    field(OUT, "Counting:Seq.PROC PP")
+}
+
+record(seq, "Counting:Seq"){
+    field(SELM, "All")
+    field(DOL1, "5") # Counting
+    field(LNK1, "Phase PP")
+    field(DOL2, "1")
+    field(LNK2, "UI:Panel:Restore.PROC PP")
+    field(DOL3, "0")
+    field(LNK3, "Dosimetry:StartTimeout:Timeout.C") # cancel StartTimeout
+}
+
+# Enter Dose delivered phase, 
+# Usually invoked by dosereached in dmc.proto
+# Pop up TREATMENT FINISHED/dose delivered message
+record(seq, "DoseReached:Seq"){
+    field(SELM, "All")
+    field(DOL1, "6") # Dose delivered
+    field(LNK1, "Phase PP")
+    field(DOL2, "1")
+    field(LNK2, "DoseReached:Log.PROC")
+}
+
+# Just a way to send dose reached message to :Log
+#  because DOL in seq can't have a string value
+record(scalcout, "DoseReached:Log"){
+    field(AA, "DMC END 00 ;Dose reached!  *")
+    field(CALC, "AA")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "Log PP")
+}
+
+# When beam plug closes, enter Term. Wait phase
+# but must distinguish whether prev phase is dose delivered or time exceeded
+record(calcout, "DoseTermWait:Calc") {
+    field(INPA, "BeamPlgAClosed:Status")
+    field(INPB, "Phase") 
+    field(CALC, "A&&(B==6)") # Dose delivered
+    field(OOPT, "Transition To Non-zero")
+    field(DOPT, "Use CALC")
+    field(OUT, "DoseTermWait:Seq.PROC PP")
+}
+
+# Pop up TREATMENT FINISHED/dose delivered message
+record(seq, "DoseTermWait:Seq"){
+    field(SELM, "All")
+    field(DOL1, "6") # Dose delivered
+    field(LNK1, "Phase PP")
+    field(DOL2, "1")
+    field(LNK2, "DoseTermWait:MsgFileName.PROC")
+    field(DOL3, "1")
+    field(LNK3, "DoseTermWait:Log.PROC")
+}
+
+# Just a way to send msg_dosereached.edl to :Panel:Request
+#  because DOL in seq can't have a string value
+record(scalcout, "DoseTermWait:MsgFileName"){
+    field(AA, "msg_dosereached.edl")
+    field(CALC, "AA")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "UI:Panel:Request PP")
+}
+
+# Invoked from [CONFIRM] on msg_dosereached - this record name is embedded in .edl
+record(seq, "DoseDelivered:Seq") {
+  field(SELM, "All")
+  field(DOL1, "1")
+  field(LNK1, "UI:Panel:Restore.PROC PP") # replace EXIT RUN panel
+  # Now we skip Term Test phase and go directly to Terminated
+  # dmc.proto term protocol sets phase 12 before CON TERM, 13 Terminated after
+  field(DOL2, "13") # Terminated
+  field(LNK2, "Phase PP")
+  # We no longer execute DMC termination test at all - not necessary
+  #field(DOL3, "1")
+  #field(LNK3, "DMC:Term.PROC PP") # send CON TERM to DMC
+  field(DOL4, "1")
+  field(LNK4, "Dosimetry:RunDose:Calc.PROC PP")
+}
+
+# Time reached
+
+# Enter Time exceeded phase, pop up TREATMENT FINISHED/time reached message
+record(seq, "TimeReached:Seq"){
+    field(SELM, "All")
+    field(DOL1, "10") # Time exceeded
+    field(LNK1, "Phase PP")
+    field(DOL2, "1")
+    field(LNK2, "TimeReached:Log.PROC")
+}
+
+# Just a way to send  message to :Log
+#  because DOL in seq can't have a string value
+record(scalcout, "TimeReached:Log"){
+    field(AA, "DMC END 00 ;Time reached!  *1")
+    field(CALC, "AA")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "Log PP")
+}
+
+# When beam plug closes, enter Term. Wait phase
+# but must distinguish whether prev phase is dose delivered or time exceeded
+record(calcout, "TimeTermWait:Calc") {
+    field(INPA, "BeamPlgAClosed:Status")
+    field(INPB, "Phase") 
+    field(CALC, "A&&(B==10)") # Time exceeded
+    field(OOPT, "Transition To Non-zero")
+    field(DOPT, "Use CALC")
+    field(OUT, "TimeTermWait:Seq.PROC PP")
+}
+
+record(seq, "TimeTermWait:Seq"){
+    field(SELM, "All")
+    field(DOL1, "11") # Term Wait
+    field(LNK1, "Phase PP")
+    field(DOL2, "1")
+    field(LNK2, "TimeTermWait:MsgFileName.PROC")
+    field(DOL3, "1")
+    field(LNK3, "TimeTermWait:Log.PROC")
+}
+
+# Just a way to send msg_timereached.edl to :Panel:Request
+#  because DOL in seq can't have a string value
+record(scalcout, "TimeTermWait:MsgFileName"){
+    field(AA, "msg_timereached.edl")
+    field(CALC, "AA")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "UI:Panel:Request PP")
+}
+
+# Invoked from [EXIT RUN] on msg_timereached - this record name is embedded in .edl
+#  like DoseDelivered:Seq except skip DMC:Term, go directly to Exited phase
+# currently this is just like :Stopped:Seq
+record(seq, "TimeReachedExit:Seq") {
+  field(SELM, "All")
+  field(DOL1, "1")
+  field(LNK1, "UI:Panel:Restore.PROC PP") # replace EXIT RUN panel
+  field(DOL2, "14") # Exited
+  field(LNK2, "Phase PP")
+  field(DOL4, "1")
+  field(LNK4, "Dosimetry:RunDose:Calc.PROC PP")
+}
+
+# [EXIT RUN] on msg_timereached.edl invokes :Stoppped:Seq
+
+# Other error - DMC response to poll protocol failed in some way
+# Can be invoked in any run phase, not just counting
+record(calcout, "DMCRunError:Calc") {
+    field(INPA, "Dosimetry:DMCError:Status")
+    field(INPB, "Phase") 
+    # DMC polling and beam may be on in phases 4/Ready 5/Counting 8/Resumed
+    # field(CALC, "!A&&(3<B&&B<6||B==8)")
+    # For now, force it always 0 so it never invokes :Seq
+    #  because END message (and maybe other msgs) set DMCError.
+    field(CALC, "0")
+    field(OOPT, "Transition To Non-zero")
+    field(DOPT, "Use CALC")
+    field(OUT, "DMCRunError:Seq.PROC PP")
+}
+
+# Enter Stopped phase, pop up TREATMENT STOPPED message
+record(seq, "DMCRunError:Seq"){
+    field(SELM, "All")
+    field(DOL1, "9") # Stopped 
+    field(LNK1, "Phase PP")
+    field(DOL2, "1")
+    field(LNK2, "DMCRunError:MsgFileName.PROC")
+    field(DOL3, "1")
+    field(LNK3, "DMC:Stop.PROC") # Send CON STOP to DMC
+    field(DOL4, "1")
+    field(LNK4, "DMCRunError:Log.PROC")
+    field(DOL5, "1") # 1 means 'warning'
+    field(LNK5, "TerminationCode")
+}
+
+# Just a way to send msg_dmccommerror.edl to :Panel:Request
+#  because DOL in seq can't have a string value
+record(scalcout, "DMCRunError:MsgFileName"){
+    field(AA, "msg_dmcrunerror.edl")
+    field(CALC, "AA")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "UI:Panel:Request PP")
+}
+
+# [EXIT RUN] on msg_dmcrunerror.edl invokes :Stopped:Seq
+#  like Exited:Seq but no DMC:Stop - it's already Stopped
+# currently this is just like :TimeReachedExit:Seq
+record(seq, "Stopped:Seq") {
+  field(SELM, "All")
+  field(DOL1, "1")
+  field(LNK1, "UI:Panel:Restore.PROC PP") # replace EXIT RUN panel
+  field(DOL2, "14") # Exited
+  field(LNK2, "Phase PP")
+  field(DOL3, "1")
+  field(LNK3, "Dosimetry:RunDose:Calc.PROC PP")
+  # up to ...LNK9, LNKA
+}
+
+# Paused - when Beam Off, DMC Timer enable off, any interlock besides Dosimetry
+#           during a run
+
+# FLNK from Treatment:StartIntk:Calc
+record(calcout, "Paused:Calc") {
+    # refman says:
+    # Paused when phase is Counting or Resumed and ..
+    #  any interlock set *except dosimetry*
+    #  DMC Timer Enable off 
+    #  Beam Off pressed at therapy console
+    # INPA not used
+    # BUT cnts/code/dmc.c header says it *only* depends on DMCTimerAEnabled 
+    #  all other effects are indirect through that.
+    field(INPA, "Phase") 
+    # This record gets FLNK from StartIntlk:Calc
+    field(INPB, "StartIntlk:Calc.VAL")
+    field(INPC, "Dosimetry:StartTimeout:Status")
+    # Phase 4/Ready 5/Counting 8/Resumed
+    # !B means any sw or hw interlock *except* dosim relays are set
+    # C means Dosimetry:StartTimeout is clear, *not* set
+    # when Dosimetry:StartTimeout set, show msg_start_timeout not msg_interrupted
+    field(CALC, "(A==4||A==5||A==8)&&!B&&C") # 25 char, STRING[36]
+    field(OOPT, "Transition To Non-zero")
+    field(DOPT, "Use CALC")
+    field(OUT, "Paused:Seq.PROC PP")
+}
+
+# Enter Paused phase, pop up message
+record(seq, "Paused:Seq"){
+    field(SELM, "All")
+    field(DOL1, "7") # Paused
+    field(LNK1, "Phase PP")
+    field(DOL2, "1")
+    field(LNK2, "Paused:MsgFileName.PROC")
+    field(DOL3, "1")
+    field(LNK3, "Paused:Log.PROC")
+    # For Paused, interlock or status bit will log message 
+}
+
+# Just a way to send .edl to :Panel:Request
+#  because DOL in seq can't have a string value
+record(scalcout, "Paused:MsgFileName"){
+    field(AA, "msg_interrupted.edl")
+    field(CALC, "AA")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "UI:Panel:Request PP")
+}
+
+# [EXIT RUN] on msg_interrupted.edl invokes :Exited:Seq, above
+
+record(calcout, "Resumed:Calc") {
+    field(INPA, "Phase")
+    field(INPB, "StartIntlk:Calc.VAL")
+    field(INPC, "StartAPBOneShot")
+    field(INPD, "DMCTimerAEnabled:Status")
+    field(INPE, "BeamPlgAClosed:Status")
+    # This will only work if C, Start button one shot, stays on long enough for EPICS
+    #  maybe workaround is for operator to lean on button long enough to clear message
+    field(CALC, "(A==7)&&B&&C") # A is Phase, 7/Paused
+    # Usually START button C triggers OUT, DMC Timer D and Plug E are backup
+    # This does NOT work with Beam Off at therapy console - clears while beam still on.
+    # field(CALC, "(A==7)&&B&&(C||D||!E)") # A is Phase, 7/Paused
+    field(OOPT, "When Non-zero") # make sure this appears, should be idempotent
+    field(DOPT, "Use CALC")
+    field(OUT, "Resumed:Seq.PROC PP")
+}
+
+# Enter Resumed phase, dismiss message
+record(seq, "Resumed:Seq"){
+    field(SELM, "All")
+    field(DOL1, "1")
+    field(LNK1, "UI:Panel:Restore.PROC PP") # only if panel is msg*
+    field(DOL2, "8") # Resumed
+    field(LNK2, "Phase PP")
+    # For Resumed, phase change etc. will log message 
+}
+
+# Calculate run dose, increment accums, write records
+
+# LNK to this record's PROC from both :DoseDelivered:Seq and several Exited:Seq
+# See refman 1.2.5, this the simplest case 
+record(calcout, "Dosimetry:RunDose:Calc") {
+    field(INPA, "Dosimetry:DoseA:Actual")
+    field(INPB, "Dosimetry:DoseB:Actual")
+    field(CALC, "MAX(A,B)")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "Dosimetry:RunDose:Official PP")
+    field(FLNK, "Dosimetry:DailyDose:AccumCalc")
+}
+
+# DailyDose:Calc already defined in dosimetry.substitutions + accum.template
+record(calcout, "Dosimetry:DailyDose:AccumCalc") {
+    field(INPA, "Dosimetry:RunDose:Official")
+    field(INPB, "Dosimetry:DailyDose:Accumulated")
+    field(CALC, "A+B")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "Dosimetry:DailyDose:Accumulated PP")
+    field(FLNK, "Dosimetry:TotalDose:AccumCalc")
+}
+
+# TotalDose:Calc already defined in dosimetry.substitutions + accum.template
+record(calcout, "Dosimetry:TotalDose:AccumCalc") {
+    field(INPA, "Dosimetry:RunDose:Official")
+    field(INPB, "Dosimetry:TotalDose:Accumulated")
+    field(CALC, "A+B")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "Dosimetry:TotalDose:Accumulated PP")
+    field(FLNK, "Dosimetry:Fractions:AccumCalc")
+}
+
+record(calcout, "Dosimetry:Fractions:AccumCalc") {
+    field(INPA, "Dosimetry:Fractions:Counting")
+    field(INPB, "Dosimetry:Fractions:Accumulated")
+    field(CALC, "A?B+1:B")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "Dosimetry:Fractions:Accumulated PP")
+    field(FLNK, "Dosimetry:Fractions:StopCounting")
+}
+
+# process this record to disable :Counting
+record(calcout, "Dosimetry:Fractions:StopCounting") {
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(CALC, "0")
+  field(OUT, "Dosimetry:Fractions:Counting") 
+  field(FLNK, "TerminationCode:Calc")
+}
+
+record(calcout, "TerminationCode:Calc") {
+  field(INPA, "Dosimetry:DMCError:Status")
+  field(INPB, "DMC:PollErrors")
+  # B is consecutive error count, if nonzero recent data might be unrecorded
+  field(CALC, "!A||B") 
+  field(OOPT, "Every Time") 
+  field(DOPT, "Use CALC") # unconditional, 0 no error, 1 warning
+  field(OUT, "TerminationCode PP")
+  field(FLNK, "Finished:Fanout")
+}
+
+# Treatment:Finished:Seq in treatment_record.db fans out to
+# Dosimetry:Command, Treatment:Event to store accum and treatment records
+ 
+# prescription.py calls caput to Treatment:SettingsLoaded 
+#  to indicate all prescription data loaded
+# this must be *last* caput to PV when field is selected, IOC depends on it
+# now we can initialize various settings
+record(seq, "SettingsLoaded"){
+    field(SELM, "All")
+    # set dosimetry subsystem to overridden if dose exceeds prescription etc. 
+    # NOT! Set override downstream from RunDose:Preset, not upstream here
+    #field(DOL1, "1")
+    #field(LNK1, "Dosimetry:Subsystem:CalcOverride.PROC")
+    # various initializations, first the error counters:
+    field(DOL2, "0")
+    field(LNK2, "RecordNumber")
+    # Now PollErrors only stores *consecutive* error counts, don't reset here
+    #field(DOL3, "0")
+    #field(LNK3, "TMC:PollErrors")
+    #field(DOL4, "0")
+    #field(LNK4, "LCC:PollErrors")
+    #field(DOL5, "0")
+    #field(LNK5, "DMC:PollErrors")
+    # initially not overridde
+    field(DOL6, "0")
+    field(LNK6, "Dosimetry:Subsystem:Override")
+    # compute RunDose and Time from Prescribed, Accumulated
+    field(DOL7, "1")
+    field(LNK7, "Dosimetry:RunDose:Computed.PROC")
+    field(DOL8, "1")
+    field(LNK8, "FilterWedge:ExperimentField:Calc.PROC")
+    field(DOL9, "1")
+    field(LNK9, "Session:PrescribedNullPv:Calc.PROC")
+    # up to 10 outputs: ...LNK9, LNKA 
+}
+# Treatment record and accumulations items
+# renamed treatment.db -> treatment_record.db 18 Nov 2013
+# also move out treatment sequence records to new treatment.db
+
+# Fanout to save accum records, treatment records and treatment autosave file
+# Triggered by FLNK to here from Dosimetry:TotalDose:Calc in treatment.db
+record(fanout, "Finished:Fanout"){
+  # Enable edmFilters with this LNK1
+  field(LNK1, "Dosimetry:Command:Calc")
+  # Disable .proto exec system by commenting out this LNK1
+  # field(LNK1, "StoreAccum:Command:Calc")
+  # Treatment records also
+  field(LNK2, "Event:Calc")
+  field(LNK3,  "DoseWarning:Calc")
+  field(SELM, "All")
+  # up to 6 LNK
+}
+
+record(scalcout, "DoseWarning:Calc") {
+    field(INPA, "TerminationCode")
+    field(AA, "msg_dose_warning.edl")
+    field(CALC, "A")
+    field(OCAL, "AA")
+    field(OOPT, "When Non-zero")
+    field(DOPT, "Use OCAL")
+    field(OUT, "UI:Panel:Request PP")
+}
+
+# Intercept timer enabled samples so :Event:Calc only sees transitions
+record(calcout, "DMCTimerAEnabled:Calc"){
+  field(INPA, "DMCTimerAEnabled:Status")
+  field(CALC, "A")
+  field(OOPT, "On Change")
+  field(DOPT, "Use CALC")
+  field(OUT, "Event:Calc.PROC PP")
+}
+
+record(calcout, "Event:Calc"){
+  field(INPA, "Phase") # Race condition?
+  field(INPB, "DMCTimerAEnabled:Status")
+  # Phase 4 Ready, 11 Term.Wait  Event 1 Beam on, 2 Beam off, 3 Run finished
+  field(CALC, "A<4?0:(A>11?3:(B?1:2))")
+  field(OOPT, "When Non-zero")
+  field(DOPT, "Use CALC")
+  field(OUT, "Event PP")
+  field(FLNK, "RecordNumber:Calc")
+}
+
+# Reset to 0 each day in prescription.py put_accumulations, then count up
+record(calcout, "RecordNumber:Calc"){
+  field(INPA, "RecordNumber")
+  field(CALC, "A+1") # reset to 0 in prescription.py put_accumulations
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "RecordNumber PP")
+  field(FLNK, "Records:Fanout")
+}
+
+# Fanout to save treatment records and treatment autosave file but *not* accum records
+record(fanout, "Records:Fanout"){
+  # Postrges database treatment record
+  # Enable edmFilters with this LNK1
+  # 13-Jan-2014 we found that commenting this out *does* reduce white screen/delay
+  # 23-Jul-2014 try uncommenting this and changing order of cmds in therapy.sh
+  field(LNK1, "Command:Calc")
+  # Disable .proto exec system by commenting out this LNK1
+  # field(LNK1, "StoreTreatment:Command:Calc")
+  # autosave treatment record
+  # 13-Jan-2014 we found that commenting this out does *not* reduce white screen/delay
+  field(LNK2, "Save:Calc")
+  field(SELM, "All")
+  # up to 6 LNK
+}
+
+# Treatment autosave
+
+# Autosave a treatment record file each time Records:Fanout processes
+record(calcout, "Save:Calc"){
+  field(INPA, "RecordNumber")
+  field(CALC, "A")
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "Save PP")
+}
+
+# Each time VAL changes, autosave writes treatment record file
+record(longout, "Save") {
+  field(DESC, "PV named in create_triggered_set()")
+}
+
+# generate filename for autosave treatment record file
+# based on Session:TimeStamp in session.db
+# each saved file gets unique name with embedded date/time stamp
+record(stringin, "SaveName") {
+  field(DESC, "SAVENAMEPV in create_triggered_set()")
+  field(SCAN, "1 second")
+  field(DTYP, "Soft Timestamp")
+  field(INP, "@isotr%Y-%m-%d-%H%M%S.sav") # C strftime format
+}
+
+# Save accumulation records and treatment records using edmFilters mechanism
+# For an alternative using .proto with exec 'system ...' see treatment_proto.db
+# but it did not work
+
+# Update accumulation record in database each time Records:Fanout processes
+record(scalcout, "Dosimetry:Command:Calc"){
+  field(INPA, "$(ROOM):Session:Mode") # 0 ZNAM Therapy, 1 ONAM Experiment
+  field(AA, "accumulation.sh")
+  field(CALC, "A")
+  field(OCAL, "AA")
+  field(OOPT, "When Zero")
+  field(DOPT, "Use OCAL")
+  field(OUT, "Dosimetry:Command PP")
+}
+
+# This PV is the filePv in an EDM embedded window
+# assign treatment.sh to this PV to invoke that command via edmFilters
+record(stringout, "Dosimetry:Command") {
+  field(DESC, "Accumulation record command")
+  field(VAL, "no_command.edl")  # initially no command
+}
+
+# Store a treatment record in database each time Records:Fanout processes
+record(scalcout, "Command:Calc"){
+  field(AA, "treatment.sh")
+  field(CALC, "AA")
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "Command PP")
+}
+
+# This PV is the filePv in an EDM embedded window
+# assign treatment.sh to this PV to invoke that command via edmFilters
+record(stringout, "Command") {
+  field(DESC, "Treatment record command")
+  field(VAL, "no_command.edl")  # initially no command
+}
+
+# end of records that control storage, data records follow
+
+record(mbbo, "Event"){
+  field(DESC, "Treatment event")
+  field(VAL, 0)         # Test
+  field(ZRST, "Test")   # for example when written on demand not by IOC event
+  field(ONST, "Beam on")
+  field(TWST, "Beam off")
+  field(THST, "Run finished")
+}
+
+# Treatment record serial number 
+# There might be multiple records for a control point
+
+record(longout, "RecordNumber"){
+  field(DESC, "Treatment record serial number")
+  field(VAL, 0) # reset to 0 each day for each field
+}
+
+record(longout, "Session:Field:ControlPoint"){
+  field(DESC, "Referenced Control Point Index 300C,00F0") # 40 char limit
+  field(VAL, 0) # 0-based, 0 is first Beam On, 1 is first Beam Off
+} 
+
+# These Reference PVs are not used by IOC for control
+#  but can be used in postgres database 
+#  to relate treatment records to prescription records.
+# They are written to treatment records so must be stored in IOC.
+
+record(longout, "Dosimetry:FractionGroup:Reference"){
+  field(DESC, "Referenced Fraction Group Num. 300C,0022")
+  field(VAL, 1) # fraction group array is 1-based, not 0-based
+}
+
+record(longout, "FilterWedge:WedgeNumber:Reference"){
+  field(DESC, "Wedge Number, DICOM (300A,00D2)")
+  field(VAL, -1) # 0-based, -1 means no wedge in this field
+}
+
+# For treatment records
+
+record(mbbo, "DeliveryType"){
+  field(DESC, "Treatment Delivery Type, DICOM 300A,00CE")
+  field(VAL, 0) # TREATMENT
+  # from the DICOM standard, in order
+  field(ZRST, "TREATMENT")
+  field(ONST, "OPEN_PORTFILM")
+  field(TWST, "TRMT_PORTFILM")
+  field(THST, "CONTINUATION") # continuation of interrupted treatment
+  field(FRST, "SETUP") # no treatment beam is applied
+}
+
+record(mbbo, "TerminationStatus"){
+  field(DESC, "Treatment Termination Status 3008,002A")
+  field(VAL, 0) # NORMAL
+  # from the DICOM standard, in order
+  field(ZRST, "NORMAL") # terminated normally
+  field(ONST, "OPERATOR") # operator terminated treatment
+  field(TWST, "MACHINE") # machine terminated treatment
+  field(THST, "UNKNOWN") # status at termination unknown (this is a warning)
+}
+
+record(mbbo, "TerminationCode"){
+  field(DESC, "Treatment Termination Code 3008,002B")
+  field(VAL, 0) # NORMAL
+  # DICOM says this is machine-dependent
+  # Use Warning Flag from old CNTS accum.dat file
+  # See old CNTS operations manual, 4.3.6, Field Data Record
+  field(ZRST, "no error") # 'no warning' in old CNTS, but looks weird in logs
+  field(ONST, "warning")  # 'suspect' in old CNTS, ditto
+  field(TWST, "crashed")
+}

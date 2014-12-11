@@ -1,0 +1,362 @@
+# remove Iso:Session:  replace LOW, 0) with LOW, "0")
+
+# session state variables
+# note default value for ROOM
+# "Iso" isocentric treatment room, "Fix" fixed beam room
+record(longin, "Patient:Id") {
+  field(VAL, "0")
+  field(FLNK, "Patient:Fanout")
+  field(LOW, "0")          # missing value in :Id :Plan :Number
+  field(LSV, "INVALID")  # INVALID alarm SEVR when VAL 0
+}
+# session state variables
+# note default value for ROOM
+# "Iso" isocentric treatment room, "Fix" fixed beam room
+record(longin, "Patient:Number") {
+  field(VAL, "0")
+  field(FLNK, "Patient:Log")
+  field(LOW, "0")          # missing value in :Id :Plan :Number
+  field(LSV, "INVALID")  # INVALID alarm SEVR when VAL 0
+}
+# session state variables
+# note default value for ROOM
+# "Iso" isocentric treatment room, "Fix" fixed beam room
+record(longin, "Field:Plan") {
+  field(VAL, "0")
+  field(FLNK, "NoPlan:Calc")
+  field(LOW, "0")          # missing value in :Id :Plan :Number
+  field(LSV, "INVALID")  # INVALID alarm SEVR when VAL 0
+}
+# session state variables
+# note default value for ROOM
+# "Iso" isocentric treatment room, "Fix" fixed beam room
+record(longin, "Field:Number") {
+  field(VAL, "0")
+  field(FLNK, "Field:Fanout")
+  field(LOW, "0")          # missing value in :Id :Plan :Number
+  field(LSV, "INVALID")  # INVALID alarm SEVR when VAL 0
+}
+# session state variables
+# note default value for ROOM
+# "Iso" isocentric treatment room, "Fix" fixed beam room
+record(stringin, "Patient:Name") {
+  field(VAL, "No patient")
+  field(FLNK, "")
+}
+# session state variables
+# note default value for ROOM
+# "Iso" isocentric treatment room, "Fix" fixed beam room
+record(stringin, "Field:Name") {
+  field(VAL, "No field")
+  field(FLNK, "Field:Log")
+}
+# session state variables
+# note default value for ROOM
+# "Iso" isocentric treatment room, "Fix" fixed beam room
+record(stringin, "Operator:Name") {
+  field(VAL, "No operator")
+  field(FLNK, "Operator:Log")
+}
+
+record(bi, "Mode") {
+  field(DESC, "MODE")
+  field(VAL, "0")  # initially Therapy mode
+  field(ZNAM, "Therapy")
+  field(ONAM, "Experiment")
+  field(FLNK, "NewMode:Calc")
+}
+
+record(bi, "Operator:Role") {
+  field(DESC, "ROLE")
+  field(VAL, "0")  # initially Therapy mode
+  field(ZNAM, "Therapist")
+  field(ONAM, "Physicist")
+  field(FLNK, "NewRole:Calc")
+}
+
+record(bi, "ModeRequest") {
+  field(DESC, "MODE REQUEST")
+  field(VAL, "0")  # initially Therapy mode
+  field(ZNAM, "Therapy")
+  field(ONAM, "Experiment")
+  field(FLNK, "ModeRequest:Calc")
+}
+record(calcout, "NewPatient:Calc") {
+  field(INPA, "Patient:Id MS") # Maximize Severity to propagate alarm
+  field(CALC, "A")
+  field(OOPT, "On Change")
+  field(DOPT, "Use OCAL")
+  field(OCAL, "0")
+  field(OUT, "NewPatient:Seq PP MS") # MS to propagate alarm
+}
+record(calcout, "NoPatientNumber:Calc") {
+  field(INPA, "Patient:Id MS") # Maximize Severity to propagate alarm
+  field(CALC, "A")
+  field(OOPT, "Transition To Zero")
+  field(DOPT, "Use OCAL")
+  field(OCAL, "0")
+  field(OUT, "Patient:Number PP MS") # MS to propagate alarm
+}
+record(calcout, "NoPlan:Calc") {
+  field(INPA, "Field:Plan MS") # Maximize Severity to propagate alarm
+  field(CALC, "A")
+  field(OOPT, "Transition To Zero")
+  field(DOPT, "Use OCAL")
+  field(OCAL, "0")
+  field(OUT, "Field:Number PP MS") # MS to propagate alarm
+}
+record(calcout, "NoField:Calc") {
+  field(INPA, "Field:Number MS") # Maximize Severity to propagate alarm
+  field(CALC, "A")
+  field(OOPT, "Transition To Zero")
+  field(DOPT, "Use OCAL")
+  field(OCAL, "0")
+  field(OUT, "Subsystems0:NoField.PROC PP MS") # MS to propagate alarm
+}
+record(calcout, "NewMode:Calc") {
+  field(INPA, "Mode MS") # Maximize Severity to propagate alarm
+  field(CALC, "A")
+  field(OOPT, "On Change")
+  field(DOPT, "Use OCAL")
+  field(OCAL, "0")
+  field(OUT, "NewMode:Seq PP MS") # MS to propagate alarm
+}
+# when patient number set to zero, set name to "No patient"
+# string output, use scalcout here, with OSV instead of OCAL
+record(scalcout, "NoPatientName:Calc") {
+  field(INPA, "Patient:Id MS") # Maximize severity - propagate alarm
+  field(CALC, "A") # will change if Patient changes
+  field(OOPT, "Transition To Zero") # Plan
+  field(DOPT, "Use OCAL") # actually, use OSV
+  field(OSV, "No patient") # No patient
+  field(OUT, "Patient:Name PP MS") # MS propagate alarm
+}
+# when patient number set to zero, set name to "No patient"
+# string output, use scalcout here, with OSV instead of OCAL
+record(scalcout, "NoFieldName:Calc") {
+  field(INPA, "Field:Number MS") # Maximize severity - propagate alarm
+  field(CALC, "A") # will change if Patient changes
+  field(OOPT, "When Zero") # Plan
+  field(DOPT, "Use OCAL") # actually, use OSV
+  field(OSV, "No field") # No patient
+  field(OUT, "Field:Name PP MS") # MS propagate alarm
+}
+record(calcout, "ModeRequest:Calc") {
+  field(INPA, "ModeRequest MS") # Maximize severity to propagate alarm
+  field(INPB, "Operator:Role MS")
+  field(CALC, "!A||B")
+  field(OOPT, "When Non-zero")
+  field(DOPT, "Use OCAL")
+  field(OCAL, "A")
+  field(OUT, "Mode PP") # MS propagate alarm
+}
+record(calcout, "NewRole:Calc") {
+  field(INPA, "Operator:Role MS") # Maximize severity to propagate alarm
+  field(INPB, "Mode MS")
+  field(CALC, "!A&&B")
+  field(OOPT, "Transition To Non-zero")
+  field(DOPT, "Use OCAL")
+  field(OCAL, "0")
+  field(OUT, "Mode PP") # MS propagate alarm
+}
+# remove $(ROOM="Iso"): $(ROOM="Iso"):Session: $(ROOM):
+# replace 0) "0"), -9999) "-9999")%
+
+# Most session records are defined in session.substitutions
+
+# propagate new therapy/expt mode to patient and display
+record(seq, "NewMode:Seq") {
+  field(SELM, "All")
+  field(DOL1, "0") # just send to ...:Calc.PROC, :Calc has its own inputs
+  field(LNK1, "UI:Patients:Calc.PROC PP")
+  field(DOL2, "0") # No patient
+  field(LNK2, "Patient:Id PP MS")
+  # This just prints 0.00000 and 1.0000 in the log
+  #field(DOL3, "Mode")
+  #field(LNK3, "Log PP MS") # directly to :Log, no need to calc
+  field(DOL3, "0") # just send to ..:Log.PROC, has its own inputs
+  field(LNK3, "Mode:Log.PROC PP") 
+  # up to 10 DOL/LNK pairs
+}
+
+# propagate new patient to field and display
+record(seq, "NewPatient:Seq") {
+  field(SELM, "All")
+  field(DOL1, "0") # just send to ...:Calc.PROC, :Calc has its own inputs
+  field(LNK1, "UI:NewPatient:Calc.PROC PP")
+  field(DOL2, "0") # No field
+  field(LNK2, "Field:Plan PP MS")
+  # up to 10 DOL/LNK pairs
+}
+
+# propagate new field to display
+record(calcout, "NewField:Calc") {
+  field(INPA, "Field:Number")
+  field(CALC, "A")
+  field(OOPT, "On Change")
+  field(DOPT, "Use CALC") # Value doesn't matter, we just send to .PROC
+  field(OUT, "NewField:Fanout.PROC PP")
+}
+
+# FLNK to here from NewField:Calc
+record(fanout, "NewField:Fanout") {
+  field(LNK1, "UI:NewField:Calc")
+  field(LNK2, "TMC:Reset")
+  field(LNK3, "LCC:SelectField")
+  field(LNK4, "NewField:Seq")
+  field(LNK5, "DMC:Reset")
+  field(LNK6, "Dosimetry:RunDose:Computed")
+  field(SELM, "All")
+  # up to 6 LNK
+}
+
+
+# gets LNK from NewField:Fanout in session.db
+record(seq, "NewField:Seq") {
+  field(SELM, "All")
+  field(DOL1, "0") # Set the interlock, cleared by lcc.proto window protocol
+  field(LNK1, "Collimator:LCCBusy:Status") # 0 indicates initialization in progress
+  field(DOL3, "0")
+  field(LNK3, "Dosimetry:DoseA:Actual")
+  field(DOL4, "0")
+  field(LNK4, "Dosimetry:DoseB:Actual")
+  field(DOL5, "0")
+  field(LNK5, "Dosimetry:Time:Actual")
+  # up to 10 DOL/LNK pairs
+}
+
+# Following records propagate invalid values and alarms when no patient, no field
+
+# FLNK to here from Field:Number
+record(fanout, "Field:Fanout") {
+  field(LNK1, "NoField:Calc")
+  field(LNK2, "NewField:Calc") # above
+  field(SELM, "All")
+  # up to 6 LNK
+}
+
+# FLNK to here from Patient:Id
+record(fanout, "Patient:Fanout") {
+  field(LNK1, "NewPatient:Calc")
+  field(LNK2, "NoPatientNumber:Calc")
+  field(LNK3, "NoPatientName:Calc")
+  field(SELM, "All")
+  # up to 6 LNK
+}
+
+record(seq, "Subsystems0:NoField") {
+  field(SELM, "All")
+  field(DOL1, "0") # just send to ...:Calc.PROC, ...:Invalid uses its own DOLS
+  field(LNK1, "Subsystems1:NoField.PROC PP MS")
+  field(DOL2, "0") # just send to ...:Calc.PROC, ...:Calc uses its own .INPA
+  field(LNK2, "NoFieldName:Calc.PROC PP MS") # "No field"
+  field(DOL3, "-9999") # indicates INVALID for ai/ao, other numeric settings
+  field(LNK3, "GantryCouch:Gantry:Prescribed PP MS") # INVALID
+  field(DOL4, "-9999")
+  field(LNK4, "GantryCouch:Collimator:Prescribed PP MS") 
+  field(DOL5, "-9999")
+  field(LNK5, "GantryCouch:Turntable:Prescribed PP MS") 
+  field(DOL6, 5) # indicates INVALID in Filter/Wedge discrete setting, mbbo/mbbi
+  field(LNK6, "FilterWedge:WedgeType:Prescribed PP MS") # Illegal
+  field(DOL7, 5)
+  field(LNK7, "FilterWedge:WedgeRot:Prescribed PP MS")
+  field(DOL8, 5)
+  field(LNK8, "FilterWedge:FlatFilter:Prescribed PP MS")
+  # up to 10 DOL/LNK pairs
+}
+
+record(seq, "Subsystems1:NoField") {
+  field(SELM, "All")
+  field(DOL1, "-9999")
+  field(LNK1, "Dosimetry:DailyDose:Prescribed PP MS") 
+  field(DOL2, "-9999")
+  field(LNK2, "Dosimetry:TotalDose:Prescribed PP MS") 
+  field(DOL3, "-9999")
+  field(LNK3, "Dosimetry:Fractions:Prescribed PP MS") 
+  field(DOL4, "0") # just send to ...:Quad0:NoField.PROC, :Invalid uses its own DOLS
+  field(LNK4, "Collimator:Quad0:NoField.PROC PP MS")
+  field(DOL5, "0")
+  field(LNK5, "Collimator:Quad1:NoField.PROC PP MS")
+  field(DOL6, "0")
+  field(LNK6, "Collimator:Quad2:NoField.PROC PP MS")
+  field(DOL7, "0")
+  field(LNK7, "Collimator:Quad3:NoField.PROC PP MS")
+  # up to 10 DOL/LNK pairs
+}
+
+# timestamp
+# note default values for SYSTEM, SUBSYSTEM
+# "Iso" isocentric treatment room, "Fix" fixed beam room
+record(stringin, "TimeStamp") {
+  field(SCAN, "1 second")
+  field(DTYP, "Soft Timestamp")
+  field(INP, "@%d-%b-%Y %H:%M:%S")
+}
+# remove $(ROOM):Dosimetry:
+
+# dosimetry_setup.db - treatment sequence logic etc, invokes protocols in dmc.db
+
+# Calculate enabling conditions for Dosimetry subsystem AutoSetup
+# Too many conditions to fit into 40 char CALC limit so split into two records
+record(calcout, "Subsystem:AutoSetup") {
+  # all of these interlocks must be clear
+  field(INPA, "DMCError:Status")
+  field(INPB, "DMCSetup:Status")
+  field(INPC, "DMCCal:Status")
+  field(INPD, "PressTemp:Status")
+  field(CALC, "A&&B&&C&&D") # all interlocks clear
+  field(OOPT, "When Non-zero") # when CALC is True, that is when intlks clear
+  field(DOPT, "Use CALC")
+  field(OUT, "Subsystem:CheckUI.PROC PP") 
+}
+
+# FIXME still more enabling conditions: preset dose and time in range
+# Also, must provide dialogs about overrides, partial fractions etc.
+# But for now, just get dmc.proto autosetup started
+
+record(scalcout, "Subsystem:CheckUI") {
+  # one of these screens must be displayed
+  field(INAA, "$(ROOM):UI:Panel")
+  field(BB, "summary.edl")
+  field(CC, "dosimetry.edl")
+  field(DD, "plc_status.edl") # helpful for debugging
+  field(CALC, "AA==BB||AA==CC||AA==DD") # one of these screens is displayed
+  field(OOPT, "When Non-zero")
+  field(DOPT, "Use CALC")
+  # That's all the enabling conditions, now start
+  field(OUT, "$(ROOM):DMC:AutoSetup.PROC PP") 
+}
+
+# calculate preset dose and time frome prescribed daily dose
+# send output to preset, initially they are them, preset can be edited
+
+# Write to .PROC from Session:NewField:Fanout
+record(calcout, "RunDose:Computed") {
+  field(INPA, "DailyDose:Prescribed")
+  field(DESC, "Prescribed dose for the run")
+  field(CALC, "A")
+  field(DOPT, "Use CALC")
+  field(OOPT, "Every Time")
+  field(OUT, "RunDose:Preset PP")
+  field(FLNK, "Time:Computed") 
+}
+
+# FLNK from Dosimetry:RunDose:Preset
+record(calcout, "Time:Computed") {
+  field(DESC, "Backup time for the run")
+  field(PREC, "2")
+  field(EGU, "min")
+  field(INPA, "RunDose:Preset") # MU
+  field(INPB, "DoseRate:Cal")   # MU/min
+  field(INPC, "TimeFactor:Cal") # unitless
+  field(D, "0.5") # minimum time in minutes
+  field(CALC, "E:=C*A/B;E>D?E:D")
+  field(DOPT, "Use CALC")
+  field(OOPT, "Every Time")
+  field(OUT, "Time:Preset PP")
+}
+
+# prevent error messages, temporarily FLNK etc to here
+record(bo, "Iso:Nowhere") {
+  field(DESC, "Dummy destination for FLNK")
+}
