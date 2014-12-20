@@ -17,5 +17,7 @@ This repository provides these tools:
  
 - [vdb.py](doc/vdb.md): generates a data flow graph from an EPICS database
 
+The contents of this repository are covered by the 
+[BSD License](http://www.opensource.org/licenses/BSD-3-Clause)
 
 Revised December 2014.
