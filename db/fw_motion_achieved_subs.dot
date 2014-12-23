@@ -1,0 +1,30 @@
+digraph fw_motion_achieved_subs {
+  rankdir=LR;
+
+  "WedgeTypeNone:Achieved" [ shape=box, label="WedgeTypeNone:Achieved\nbi" ]
+  "WedgeTypeNone:Achieved" -> "WedgeType:Encode" [ label="FLNK  ", style="dotted" ]
+  "WedgeType30:Achieved" [ shape=box, label="WedgeType30:Achieved\nbi" ]
+  "WedgeType30:Achieved" -> "WedgeType:Encode" [ label="FLNK  ", style="dotted" ]
+  "WedgeType45:Achieved" [ shape=box, label="WedgeType45:Achieved\nbi" ]
+  "WedgeType45:Achieved" -> "WedgeType:Encode" [ label="FLNK  ", style="dotted" ]
+  "WedgeType60:Achieved" [ shape=box, label="WedgeType60:Achieved\nbi" ]
+  "WedgeType60:Achieved" -> "WedgeType:Encode" [ label="FLNK  ", style="dotted" ]
+  "WedgeRot0:Achieved" [ shape=box, label="WedgeRot0:Achieved\nbi" ]
+  "WedgeRot0:Achieved" -> "WedgeRot:Encode" [ label="FLNK  ", style="dotted" ]
+  "WedgeRot90:Achieved" [ shape=box, label="WedgeRot90:Achieved\nbi" ]
+  "WedgeRot90:Achieved" -> "WedgeRot:Encode" [ label="FLNK  ", style="dotted" ]
+  "WedgeRot180:Achieved" [ shape=box, label="WedgeRot180:Achieved\nbi" ]
+  "WedgeRot180:Achieved" -> "WedgeRot:Encode" [ label="FLNK  ", style="dotted" ]
+  "WedgeRot270:Achieved" [ shape=box, label="WedgeRot270:Achieved\nbi" ]
+  "WedgeRot270:Achieved" -> "WedgeRot:Encode" [ label="FLNK  ", style="dotted" ]
+  "FlatFilterLarge:Achieved" [ shape=box, label="FlatFilterLarge:Achieved\nbi" ]
+  "FlatFilterLarge:Achieved" -> "FlatFilter:Encode" [ label="FLNK  ", style="dotted" ]
+  "FlatFilterSmall:Achieved" [ shape=box, label="FlatFilterSmall:Achieved\nbi" ]
+  "FlatFilterSmall:Achieved" -> "FlatFilter:Encode" [ label="FLNK  ", style="dotted" ]
+  "FlatFilterNone:Achieved" [ shape=box, label="FlatFilterNone:Achieved\nbi" ]
+  "FlatFilterNone:Achieved" -> "FlatFilter:Encode" [ label="FLNK  ", style="dotted" ]
+  "WedgeType:Encode" [ shape=box, style=dashed ]
+  "FlatFilter:Encode" [ shape=box, style=dashed ]
+  "WedgeRot:Encode" [ shape=box, style=dashed ]
+
+}

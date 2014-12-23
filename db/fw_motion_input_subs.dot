@@ -1,0 +1,18 @@
+digraph fw_motion_input_subs {
+  rankdir=LR;
+
+  "WedgeRot:DriveEnabled" [ shape=box, label="WedgeRot:DriveEnabled\nbi" ]
+  "WedgeRot:DriveEnabled" -> "MotionSafety:Status" [ label="FLNK  ", style="dotted" ]
+  "WedgeType:DriveEnabled" [ shape=box, label="WedgeType:DriveEnabled\nbi" ]
+  "WedgeType:DriveEnabled" -> "MotionSafety:Status" [ label="FLNK  ", style="dotted" ]
+  "FlatFilter:DriveEnabled" [ shape=box, label="FlatFilter:DriveEnabled\nbi" ]
+  "FlatFilter:DriveEnabled" -> "MotionSafety:Status" [ label="FLNK  ", style="dotted" ]
+  "WedgeRot:ErrorOK" [ shape=box, label="WedgeRot:ErrorOK\nbi" ]
+  "WedgeRot:ErrorOK" -> "MotionSafety:Status" [ label="FLNK  ", style="dotted" ]
+  "WedgeType:ErrorOK" [ shape=box, label="WedgeType:ErrorOK\nbi" ]
+  "WedgeType:ErrorOK" -> "MotionSafety:Status" [ label="FLNK  ", style="dotted" ]
+  "FlatFilter:ErrorOK" [ shape=box, label="FlatFilter:ErrorOK\nbi" ]
+  "FlatFilter:ErrorOK" -> "MotionSafety:Status" [ label="FLNK  ", style="dotted" ]
+  "MotionSafety:Status" [ shape=box, style=dashed ]
+
+}
