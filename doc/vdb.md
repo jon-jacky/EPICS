@@ -116,7 +116,8 @@ leaving only *Settings:Readiness* in the *.vdb* file.
 - Quote field values.  Apparently *parseDb* in *epicsUtils* requires
 all field values to be quoted, even numbers.  For example our *.db*
 files often say *field(DOL1, 1)*.  Use a text editor to change this to
-*field(DOL1, "1")* in the *.vdb* file.
+*field(DOL1, "1")* in the *.vdb* file.   Without these fixes, *vdb.py* 
+might produce an empty *.dot* file.
 
 - Concatenate files.  Our *vdb.py* takes a single input file.  To see
 the data flow among records described in several files, simply
