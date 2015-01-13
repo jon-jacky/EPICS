@@ -1,0 +1,334 @@
+# To turn off spontaneous repeated polling for testing, comment out:
+# DMC:Pause.LNK1
+
+# So we can control diagnostic messages via asyn traceMask, alternative to 
+#  dbLoadRecords("db/asynRecord.db","P=Iso,R=DMC:Asyn,PORT=dmc,ADDR=0,OMAX=0,IMAX=0")
+record(asyn, "Asyn"){
+  field(PORT, "dmc") # must match port in drvAsynIPPortConfigure
+  # let ADDR, OMAX, IMAX fields default to 0
+}
+
+# Do not disable reset if DMCError interlock is set, use reset to clear it
+record(stringin, "Reset") {
+  field(SCAN, "Passive")
+  field(DTYP, "stream")
+  field(INP, "@dmc.proto reset dmc") # out ESC CR, in to stringin VAL
+  field(PINI, "1") # force reset at startup
+  field(FLNK, "ResetCalc") # set DMC intlk if reset fails
+}
+
+# Set interlock if most recent command failed, *not* NO_ALARM (nonzero)
+record(calcout, "ResetCalc") {
+  field(INPA, "Reset.STAT")
+  field(CALC, "!A") # 0 means NO_ALARM but 1 means interlock clear (safe)
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "DMCError:Status PP")
+  field(FLNK, "DMCError:MessageCalc")
+}
+
+
+record(stringin, "AutoSetup") {
+  field(SCAN, "Passive")
+  field(DTYP, "stream")
+  field(INP, "@dmc.proto autosetup dmc") # out ESC CR, in to stringin VAL
+  field(FLNK, "AutoSetupCalc") # set DMC intlk if reset fails
+}
+
+# Set interlock if most recent command failed, *not* NO_ALARM (nonzero)
+# or if any of the readbacks failed
+record(calcout, "AutoSetupCalc") {
+  field(INPA, "AutoSetup.STAT")
+  field(INPB, "CalVolt1ReadBack:Calc")
+  field(INPC, "CalVolt2ReadBack:Calc")
+  field(INPD, "RunDoseReadBack:Calc")
+  # FIXME more ReadBack:Calc to come
+  field(CALC, "!A&&B&&C&&D") # A:0 means NO_ALARM but 1 means interlock clear (safe)
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "DMCError:Status PP")
+  field(FLNK, "DMCError:MessageCalc")
+}
+
+record(stringin, "Start") {
+  field(SCAN, "Passive")
+  field(DTYP, "stream")
+  field(INP, "@dmc.proto start dmc") # out ESC CR, in to stringin VAL
+  field(FLNK, "StartCalc") # set DMC intlk if reset fails
+}
+
+# Set interlock if most recent command failed, *not* NO_ALARM (nonzero)
+record(calcout, "StartCalc") {
+  field(INPA, "Start.STAT")
+  field(CALC, "!A") # 0 means NO_ALARM but 1 means interlock clear (safe)
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "DMCError:Status PP")
+  field(FLNK, "DMCError:MessageCalc")
+}
+
+record(stringin, "Poll") {
+  # field(SCAN, "2 second") # FIXME? Can DMC keep up?  VME uses 2.5 sec
+  # field(SCAN, "5 second") # DEBUG slow motion for testing
+  field(SCAN, "Passive") # DEBUG stop motion - must caput Poll.PROC 1 to poll
+  field(DTYP, "stream")
+  field(INP, "@dmc.proto poll dmc") # out ESC CR, in to stringin VAL
+  field(SDIS, "PollDisable")
+  field(DISA, "0")
+  field(DISV, "0")
+  field(FLNK, "PollCalc") # count polling errors
+}
+
+# Enable polling during a run
+# Presumably the effect of :DMCError is via change in :Phase
+record(calcout, "PollDisable") {
+  field(INPA, "Treatment:Phase")
+  # table 2.1 in refman, Run is 4/Ready through 11/Term Wait
+  field(CALC, "(3<A)&&(A<12)") # 1 when DMC should be polled, same as Treatment:Run
+  field(PINI, "0")
+  # following fields based on lcc.db
+  field(FLNK, "PollClear") 
+  # restart polling when disable cleared
+  field(OOPT, "Transition To Non-zero")
+  field(DOPT, "Use CALC")
+  field(OUT, "Poll.PROC PP") 
+}
+
+# Process :PollErrors counter when DMC:Poll.STAT is anything but NO_ALARM
+record(calcout, "PollCalc") {
+  field(INPA, "Poll.STAT") # 0 means NO_ALARM, nonzero means alarm
+  field(INPB, "PollErrors") # 0 or counting up
+  field(CALC, "A?B+1:0") # alarm counts up, successful poll clears count
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  # send to PollErrors to increment or clear counter
+  field(OUT, "PollErrors PP")
+  # don't set error interlock, instead count errors (above)
+  # field(OUT, "DMCError:Status PP")
+  field(FLNK, "Heartbeat")
+}
+
+record(calc, "Heartbeat") {
+    field(DESC, "DMC polling")
+    field(INPA, "Heartbeat")
+    field(CALC, "!A")
+    field(VAL, "0") # initialize
+    field(PINI, "1")
+    field(FLNK, "Pause")
+}
+
+record(seq, "Pause") {
+    field(SELM, "All")
+    field(DOL1, "1")
+    field(DLY1, "1.0") # seconds FIXME?  Too long?
+    # DEBUG comment out to prevent Poll repeating spontaneously
+    #field(LNK1, "Poll.PROC")
+}
+
+# Clear PollErrors counter when DMCError intlk becomes clear
+#  due to success of a different DMC protocol than Poll
+# FLNK to here from :DMCError:Status via DMC:PollDisable
+record(calcout, "PollClear") {
+  field(INPA, "DMCError:Status") # 1 means clear
+  field(CALC, "!A") # when clear, send 0 to reset PollErrors
+  field(OOPT, "Transition To Zero")
+  field(DOPT, "Use CALC")
+  # send to PollErrors to clear counter
+  field(OUT, "PollErrors PP")
+}
+
+# Number of consecutive DMC polling errors
+record(longout, "PollErrors") {
+    field(DESC, "Consecutive DMC polling errors")
+    field(VAL, "0")
+    field(PINI, "1")
+    field(FLNK, "DMCError:Calc")
+}
+
+# Set DMCError interlock when consecutive error exceeds threshold
+record(calcout, "DMCError:Calc") {
+    field(INPA, "PollErrors")
+    # Can set high threshold B to investigate error frequency/duration
+    field(B, "2") # threshold of consecutive polling errors
+    field(CALC, "A>=B")
+    field(OCAL, "0") # interlock set
+    field(OOPT, "When Non-zero")
+    field(DOPT, "Use OCAL")
+    field(OUT, "DMCError:Status PP")
+    # trigger next polling cycle
+    field(FLNK, "Poll") 
+}
+
+# This is complementary to DMC:RunError:Calc in treatment.db
+# because this is only enabled when run is *not* in progress
+record(scalcout, "DMCError:MessageCalc") {
+    field(INPA, "DMCError:Status") 
+    field(INPB, "Treatment:Run") # during Run show different intlk msg
+    field(INCC, "UI:Panel") # don't preempt existing msg if present
+    field(DD, "msg_dmcerror.edl")
+    field(CALC, "!A&&!B&&CC[0,2]!='msg'")
+    field(OCAL, "DD")
+    field(OOPT, "When Non-zero") # .PROC is driven from OUT on :ResetCalc etc.
+    field(DOPT, "Use OCAL")
+    field(OUT, "UI:Panel:Request PP")
+}
+
+# use I/O Intr to catch unsolicited END Dose Reached message
+record(stringin, "DoseReached") {
+  field(DTYP, "stream")
+  field(INP, "@dmc.proto dosereached dmc")
+  field(SCAN, "I/O Intr")
+}
+
+# use I/O Intr to catch unsolicited END Time Reached message
+record(stringin, "TimeReached") {
+  field(DTYP, "stream")
+  field(INP, "@dmc.proto timereached dmc")
+  field(SCAN, "I/O Intr")
+}
+
+record(stringin, "Term") {
+  field(SCAN, "Passive")
+  field(DTYP, "stream")
+  field(INP, "@dmc.proto term dmc") # out ESC CR, in to stringin VAL
+  field(FLNK, "TermCalc") # set DMC intlk if reset fails
+}
+
+# Set interlock if most recent command failed, *not* NO_ALARM (nonzero)
+record(calcout, "TermCalc") {
+  field(INPA, "Term.STAT")
+  field(CALC, "!A") # 0 means NO_ALARM but 1 means interlock clear (safe)
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "DMCError:Status PP")
+  field(FLNK, "DMCError:MessageCalc")
+}
+
+record(stringin, "Stop") {
+  field(SCAN, "Passive")
+  field(DTYP, "stream")
+  field(INP, "@dmc.proto stop dmc") # out ESC CR, in to stringin VAL
+  field(FLNK, "StopCalc") # set DMC intlk if reset fails
+}
+
+# Set interlock if most recent command failed, *not* NO_ALARM (nonzero)
+record(calcout, "StopCalc") {
+  field(INPA, "Stop.STAT")
+  field(CALC, "!A") # 0 means NO_ALARM but 1 means interlock clear (safe)
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "DMCError:Status PP")
+  field(FLNK, "DMCError:MessageCalc")
+}
+
+# readback checks done during auto setup - FLNK from :ReadBack
+
+record(calcout, "CalVolt1ReadBack:Calc") {
+  field(INPA, "CalVolt1:Preset")
+  field(INPB, "CalVolt1:ReadBack")
+  field(CALC, "FLOOR(A)==B?1:0") # if they are unequal, send 0 to set intlk
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "DMCError:Status PP")
+}
+
+record(calcout, "CalVolt2ReadBack:Calc") {
+  field(INPA, "CalVolt2:Preset")
+  field(INPB, "CalVolt2:ReadBack")
+  field(CALC, "FLOOR(A)==B?1:0") # if they are unequal, send 0 to set intlk
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "DMCError:Status PP")
+}
+
+record(calcout, "RunDoseReadBack:Calc") {
+  field(INPA, "RunDose:Preset")
+  field(INPB, "RunDose:ReadBack")
+  field(CALC, "A==B?1:0") # if they are unequal, send 0 to set intlk
+  field(OOPT, "Every Time")
+  field(DOPT, "Use CALC")
+  field(OUT, "DMCError:Status PP")
+}
+
+# can't do time because when :Preset is 1.769 :ReadBack is 1.77, doesn't use FLOOR.
+
+# Check for bad dose samples
+# DoseA:Sample is sample most recently read from DMC
+# DoseA:Actual is most recent good sample that passes this filter
+# 1. After each poll, check :Sample against :Actual for jump (up or down)
+# 2. If no jump, promote :Sample to :Actual immediately (before next poll) 
+# 3. FLNK to :ValueError that sets :DMCError if two successive bad samples
+# So DoseA:Actual always holds a good sample that can be used to calc :RunDose:Official
+record(calcout, "DoseA:CalcFilter"){
+  field(INPA, "DoseA:Sample") # most recent poll sample
+  field(INPB, "DoseA:Actual") # most recent good sample
+  field(C, "5.0") # Jump tolerance. Typical max dose rate is 60 MU/min, samples < 2 sec 
+  field(CALC, "0<=(A-B)&&(A-B)<C") # Dose does not decrease, but increases less than jump tol.
+  field(VAL, "1")
+  field(OCAL, "A")
+  field(OVAL, "1")
+  field(OOPT, "When Non-zero")
+  field(DOPT, "Use OCAL")
+  field(OUT, "DoseA:Actual PP") # conditionally update 
+  field(FLNK, "DoseA:History") # unconditionally count errors
+  field(PINI, "1")
+}
+
+# DoseB:CalcFilter down past DoseAB:ValueError, below
+
+# Detect two or more consecutive zeros (erroneous values) from :CalcFilter
+record(calc, "DoseA:History"){
+    field(INPA, "DoseA:CalcFilter")
+    field(B, "1")    # initially
+    field(VAL, "1")  # initially
+    field(CALC, "A?A:B;B:=A") # 0 only if two or more consecutive 0
+    field(FLNK, "DoseAB:ValueError")
+    field(PINI, "1")
+}
+
+# DoseB:History down past DoseAB:ValueError, below
+
+# refman 1.2.5: ... the program ignores apparently erroneous readings
+# that occur for only one sample on one channel (these are taken to be
+# noise).  In order to be considered an error ..., a jump or decrease
+# must occur simultaneously on both channels, or must persist for two
+# (or more) consecutive samples on one channel.
+record(calcout, "DoseAB:ValueError"){
+  field(INPA, "DoseA:History") # two or more samples
+  field(INPB, "DoseB:History")
+  field(INPC, "DoseA:CalcFilter") # most recent sample
+  field(INPD, "DoseB:CalcFilter")
+  field(CALC, "A&&B&&(C||D)") # A, B each check history, A||B check simultaneous
+  field(VAL, "1") # initially
+  field(OOPT, "When Zero") 
+  field(DOPT, "Use CALC")  # send zero, means interlock set.
+  field(OUT, "DMCError:Status PP") # conditionally set interlock
+  field(FLNK, "Heartbeat:Calc") # unconditional heartbeat
+  field(PINI, "1")
+}
+
+# DoseB:Actual always holds most recent good sample, can be used to calc RunDose:Official
+record(calcout, "DoseB:CalcFilter"){
+  field(INPA, "DoseB:Sample") # most recent poll sample
+  field(INPB, "DoseB:Actual") # most recent good sample
+  field(C, "5.0") # Jump tolerance. Typical max dose rate is 60 MU/min, samples < 2 sec 
+  field(CALC, "0<=(A-B)&&(A-B)<C") # Dose does not decrease, but increases less than jump tol.
+  field(VAL, "1")
+  field(OCAL, "A")
+  field(OVAL, "1")
+  field(OOPT, "When Non-zero")
+  field(DOPT, "Use OCAL")
+  field(OUT, "DoseB:Actual PP") # conditionally update 
+  field(FLNK, "DoseB:History") # unconditionally check
+  field(PINI, "1")
+}
+
+# Detect two or more consecutive zeros (erroneous values) from :CalcFilter
+record(calc, "DoseB:History"){
+    field(INPA, "DoseB:CalcFilter")
+    field(B, "1")    # initially
+    field(VAL, "1")  # initially
+    field(CALC, "A?A:B;B:=A") # 0 only if two or more consecutive 0
+    field(FLNK, "DoseAB:ValueError")
+    field(PINI, "1")
+}
