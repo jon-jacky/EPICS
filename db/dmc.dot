@@ -43,6 +43,7 @@ digraph dmc {
   "Heartbeat" -> "Heartbeat" [ label="INPA  ", style="dashed" ]
   "Heartbeat" -> "Pause" [ label="FLNK  ", style="dotted" ]
   "Pause" [ shape=box, label="Pause\nseq" ]
+  "Pause" -> "Poll" [ label="LNK1  PROC, 1", style="solid" ]
   "Pause" -> "1" [ label="DOL1  , 1", style="solid" ]
   "PollClear" [ shape=box, label="PollClear\ncalcout\n!A\nTransition To Zero" ]
   "DMCError:Status" -> "PollClear" [ label="INPA  ", style="dashed" ]
