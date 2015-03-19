@@ -10,6 +10,15 @@ record(stringout, "UI:Panel") {
   field(FLNK, "UI:Panel:Fanout")
 }
 
+record(fanout, "UI:Panel:Fanout") {
+    field(SELM, "All")
+    field(LNK1, "UI:Dialog")
+    field(LNK2, "Dosimetry:Subsystem:CheckUI")
+    field(LNK3, "Collimator:LeafMotion:CheckUI")
+    field(LNK4, "FilterWedge:Subsystem:CheckUI")
+    field(LNK5, "UI:LogMessage:Calc")
+}
+
 # Calculate current interaction mode from UI:Panel contents
 # 0 indicates panels that can be replaced by another panel or dialog at any time
 # Nonzero values indicate dialogs that cannot be replaced or pre-empted

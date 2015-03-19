@@ -37,6 +37,10 @@ def make_node(record):
         label += '\\n%s' % record['CALC']  # calc, calcout, scalcout, acalcout
     if 'OOPT' in record:
         label += '\\n%s' % record['OOPT']  # calcout, scalcout
+    if 'OCAL' in record:
+        label += '\\n%s' % record['OCAL']  # calc, calcout, scalcout, acalcout
+    if 'DOPT' in record:
+        label += '\\n%s' % record['DOPT']  # calcout, scalcout
     print '  "%s" [ shape=box, label="%s" ]' % (name, label)
 
 def make_node_offpage(dest):
