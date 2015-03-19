@@ -1,0 +1,30 @@
+digraph ui_panel {
+  rankdir=LR;
+
+  "UI:Panel" [ shape=box, label="UI:Panel\nstringout" ]
+  "UI:Panel" -> "UI:Panel:Fanout" [ label="FLNK  ", style="dotted" ]
+  "UI:Dialog" [ shape=box, label="UI:Dialog\nscalcout\nAA[0,2]=='msg'" ]
+  "UI:Panel" -> "UI:Dialog" [ label="INAA  ", style="dashed" ]
+  "UI:Panel:Request" [ shape=box, label="UI:Panel:Request\nstringout" ]
+  "UI:Panel:Request" -> "UI:Panel:Save" [ label="FLNK  ", style="dotted" ]
+  "UI:Panel:Save" [ shape=box, label="UI:Panel:Save\nscalcout\n!A\nWhen Non-zero" ]
+  "UI:Panel:Save" -> "UI:Panel:Previous" [ label="OUT PP ", style="solid" ]
+  "UI:Dialog" -> "UI:Panel:Save" [ label="INPA  ", style="dashed" ]
+  "UI:Panel:Save" -> "UI:Panel:Previous" [ label="FLNK  ", style="dotted" ]
+  "UI:Panel" -> "UI:Panel:Save" [ label="INAA  ", style="dashed" ]
+  "UI:Panel:Previous" [ shape=box, label="UI:Panel:Previous\nstringout" ]
+  "UI:Panel:Previous" -> "UI:Panel:Update" [ label="FLNK  ", style="dotted" ]
+  "UI:Panel:Update" [ shape=box, label="UI:Panel:Update\nscalcout\n!A||BB[0,2]=='msg'\nWhen Non-zero" ]
+  "UI:Panel:Request" -> "UI:Panel:Update" [ label="INBB  ", style="dashed" ]
+  "UI:Panel:Update" -> "UI:Panel" [ label="OUT PP ", style="solid" ]
+  "UI:Dialog" -> "UI:Panel:Update" [ label="INPA  ", style="dashed" ]
+  "UI:Panel:Update" -> "UI:Panel" [ label="FLNK  ", style="dotted" ]
+  "UI:Panel" -> "UI:Panel:Update" [ label="INAA  ", style="dashed" ]
+  "UI:Panel:Restore" [ shape=box, label="UI:Panel:Restore\nscalcout\nA\nWhen Non-zero" ]
+  "UI:Panel:Previous" -> "UI:Panel:Restore" [ label="INBB  ", style="dashed" ]
+  "UI:Panel:Restore" -> "UI:Panel" [ label="OUT PP ", style="solid" ]
+  "UI:Dialog" -> "UI:Panel:Restore" [ label="INPA  ", style="dashed" ]
+  "UI:Panel" -> "UI:Panel:Restore" [ label="INAA  ", style="dashed" ]
+  "UI:Panel:Fanout" [ shape=box, style=dashed ]
+
+}

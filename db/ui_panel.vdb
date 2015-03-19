@@ -1,0 +1,79 @@
+# manage the current display in UI:Panel
+# lots of records here - could probably compress by using scalcout as state machine
+
+# currently displayed panel, now an IOC PV, no longer an EDM LOC variable
+# Iso:UI:Panel replaces LOC\Panel in buttons.edl, subsystems.edl, therapyControl.edl
+record(stringout, "UI:Panel") {
+  field(DESC, "Panel displayed in EDM")
+  field(ASG, "session") # assigned in startup .sh script
+  field(VAL, "patients.edl") # FIXME? make a special startup.edl 
+  field(FLNK, "UI:Panel:Fanout")
+}
+
+# Calculate current interaction mode from UI:Panel contents
+# 0 indicates panels that can be replaced by another panel or dialog at any time
+# Nonzero values indicate dialogs that cannot be replaced or pre-empted
+# 1 indicates msg*.edl, later we may define more codes to distinguish kinds of dialogs
+record(scalcout, "UI:Dialog") {
+    field(INAA, "UI:Panel")
+    field(CALC, "AA[0,2]=='msg'") # 0 when panel displayed, 1 when message displayed
+    # OUT etc. fields not needed
+}
+
+# Panel requested to be displayed
+record(stringout, "UI:Panel:Request") {
+  field(ASG, "ui")
+  field(DESC, "Panel requested for EDM")
+  field(VAL, "patients.edl")
+  field(FLNK, "UI:Panel:Save")
+}
+
+# Only update UI:Panel if no dialog in progress 
+#  OR if new dialog preempts it
+# this record just saves current :Panel in :Panel:Previous
+# then also FLNK to :Panel:Previous to force update to :Panel
+record(scalcout, "UI:Panel:Save") {
+    field(INAA, "UI:Panel")
+    field(INPA, "UI:Dialog")
+    field(CALC, "!A") # do not save msg panel, msg panels are pre-empted
+    field(OCAL, "AA") # UI:Panel
+    field(OOPT, "When Non-zero")  # True
+    field(DOPT, "Use OCAL")
+    field(OUT, "UI:Panel:Previous PP")
+    field(FLNK, "UI:Panel:Previous") # FLNK to :Panel
+}
+
+# Panel to restore after dialog is finished
+record(stringout, "UI:Panel:Previous") {
+  field(DESC, "Panel saved for EDM")
+  field(VAL, "patients.edl")
+  field(FLNK, "UI:Panel:Update")
+}
+
+# Save non-dialog panels so they can be restored after dialog
+# Assumes UI:Panel has already been updated with panel to save
+record(scalcout, "UI:Panel:Update") {
+    field(INAA, "UI:Panel")
+    field(INBB, "UI:Panel:Request")
+    field(INPA, "UI:Dialog")
+    # only a new msg can preempt a message
+    field(CALC, "!A||BB[0,2]=='msg'") 
+    field(OCAL, "BB")
+    field(OOPT, "When Non-zero")
+    field(DOPT, "Use OCAL")
+    field(OUT, "UI:Panel PP")
+    field(FLNK, "UI:Panel") # ensure EDM sees update
+}
+
+# restore after dialog completes - invoke from dialog when done
+record(scalcout, "UI:Panel:Restore") {
+    field(ASG, "ui")
+    field(INAA, "UI:Panel")
+    field(INBB, "UI:Panel:Previous")
+    field(INPA, "UI:Dialog")
+    field(CALC, "A") # only restore if current panel is message
+    field(OCAL, "BB") 
+    field(OOPT, "When Non-zero")
+    field(DOPT, "Use OCAL")
+    field(OUT, "UI:Panel PP")
+}
