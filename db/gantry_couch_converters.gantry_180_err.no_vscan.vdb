@@ -1,0 +1,101 @@
+
+record(ao, "Prescribed") {
+  field(ASG, "prescription")
+  field(DESC, "GANTRY")
+  field(LOPR, "-0.5")
+  field(HOPR, "360.4")
+  field(LOW, "-0.5")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "360.4")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "deg") # rotation, override default with "cm" for linear
+  field(PREC, "1")
+  field(FLNK, "Calc")
+}
+
+# Put alarm calc here rather than upstream in :PosNegAngle, above
+#  because this is used in subsequent :Calc for :Readiness, below
+record(ao, "Actual") {
+  field(DESC, "GANTRY")
+  field(LOPR, "-0.5")
+  field(HOPR, "360.4")
+  field(LOW, "-0.5")  # LOW and HIGH are *same* as LOPR and HOPR, respectively
+  field(HIGH, "360.4")
+  field(LSV, "INVALID")
+  field(HSV, "INVALID")
+  field(EGU, "deg") # rotation, override default with "cm" for linear
+  field(PREC, "1")
+  field(FLNK, "Calc")
+}
+
+record(ao, "Tolerance") {
+  field(DESC, "GANTRY")
+  field(EGU, "deg") # rotation, override default with "cm" for linear
+  field(PREC, "1")
+  field(VAL, "0.5")
+  field(FLNK, "Calc")
+}
+
+record(calc, "Calc"){
+  field(INPA, "Prescribed")
+  field(INPB, "Actual")
+  field(INPC, "Tolerance")
+  field(INPD, "Iso:Session:Mode") # 0 ZNAM Therapy, 1 ONAM Experiment
+  field(CALC, "D?2:ABS(A-B)<=C?2:ABS(A-(360-B))<=C?2:0") # always READY in Experiment mode, Gantry CALC is 39 char, limit 40
+  field(FLNK, "CalcAlarm")
+}
+
+# :Calc CALC is already 39 char so we need to cascade calc records
+#  in order to include alarms in readiness calc
+record(calc, "CalcAlarm"){
+  field(INPA, "Calc")
+  # .SEVR nonzero means alarm due to out-of-range value, see LSV HSV in templates above
+  # Use INPE,F for alarms to make it like :Calc in prescribed_motion.template
+  field(INPE, "Prescribed.SEVR")
+  field(INPF, "Actual.SEVR")
+  field(CALC, "!E&&!F&&A?2:0") 
+  field(FLNK, "CalcFilter")
+}
+
+# Filter out single-sample NOT READY
+record(calc, "CalcFilter"){
+  field(INPA, "CalcAlarm")
+  # If A is nonzero (not NOT READY) use it, otherwise use previous sample value
+  #  this will have the effect of filtering out single-sample NOT READY
+  # Previous value of A is assigned to B each time this record is processed
+  field(CALC, "A?A:B;B:=A")
+  field(FLNK, "CalcOverride")
+}
+
+record(bo, "Override"){
+  field(ASG, "ui")
+  field(ZNAM, "Not overridden")
+  field(ONAM, "Overridden")
+  field(FLNK, "CalcOverride")
+}
+
+# needed because in :Calc, CALC might be too long to include :Override 
+record(calc, "CalcOverride"){
+  field(INPA, "CalcFilter")
+  field(INPB, "Override")
+  field(CALC, "B?1:A")
+  field(FLNK, "Readiness")
+}
+
+record(mbbo, "Readiness") {
+  field(DESC, "GANTRY")
+  field(VAL, "0")  # initially NOT READY
+  field(ZRST, "NOT READY")
+  field(ONST, "OVERRIDE")
+  field(TWST, "READY")
+  field(DOL, "CalcOverride") 
+  field(OMSL, "closed_loop") # needed for DOL
+  field(FLNK,  "Actual0")
+}
+
+# For camonitor, remove fractional part to filter out noise
+record(calc, "Actual0") {
+  field(INPA, "Actual")
+  field(CALC, "FLOOR(A)")
+  field(FLNK,  "Settings:Readiness")
+}
